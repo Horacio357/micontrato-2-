@@ -46,6 +46,9 @@ if (fs.existsSync(distPath)) {
   });
 }
 
+import { initDb } from './db.js';
+
 app.listen(PORT, () => {
   console.log(`Servidor miContrato corriendo en el puerto ${PORT}`);
+  initDb();
 });
