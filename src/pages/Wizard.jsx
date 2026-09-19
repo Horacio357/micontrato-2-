@@ -141,7 +141,14 @@ export default function Wizard() {
       const documentPayload = JSON.stringify({ version: 2, text: generatedText, blocks: documentBlocks.length ? documentBlocks : [{ type: "paragraph", content: generatedText }] });
       const textBlob = new Blob([documentPayload], { type: "application/json" });
       const textFile = new File([textBlob], "contract.json", { type: "application/json" });
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: textFile });
+
+      let file_url = documentPayload;
+      try {
+        const uploadRes = await base44.integrations.Core.UploadFile({ file: textFile });
+        if (uploadRes?.file_url) file_url = uploadRes.file_url;
+      } catch (uploadErr) {
+        console.warn("UploadFile fallback:", uploadErr);
+      }
 
       const contractData = {
         template_id: contract.slug,

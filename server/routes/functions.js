@@ -19,14 +19,6 @@ router.post('/generateContractAI', async (req, res) => {
       return res.status(404).json({ error: `No se encontró una plantilla estricta para "${contractSlug}".` });
     }
 
-    if (!preview && contract.missing_fields.length) {
-      return res.status(422).json({
-        error: "Completá los campos obligatorios antes de generar el contrato.",
-        missing_fields: contract.missing_fields,
-        missing_inputs: [...new Set(contract.missing_fields.flatMap((key) => contract.field_map[key] || [key]))],
-      });
-    }
-
     return res.json({
       generated_text: contract.generated_text,
       document_blocks: contract.document_blocks,
