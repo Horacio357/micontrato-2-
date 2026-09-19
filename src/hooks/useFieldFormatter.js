@@ -9,7 +9,7 @@ export function getFieldConfig(fieldName = "", fieldType = "text") {
     return { inputMode: "numeric", pattern: "[0-9.]*", format: formatDNI, validate: null, maxLength: 10 };
   }
   if (name.includes("cuit") || name.includes("cuil")) {
-    return { inputMode: "numeric", pattern: "[0-9-]*", format: formatCUIT, validate: validateCUIT, blocking: false, maxLength: 13 };
+    return { inputMode: "numeric", pattern: "[0-9\\-]*", format: formatCUIT, validate: validateCUIT, blocking: false, maxLength: 13 };
   }
   if (name.includes("telefono") || name.includes("teléfono") || name.includes("tel") || name.includes("celular")) {
     return { inputMode: "tel", pattern: null, format: formatTelefono, validate: null, maxLength: 20 };
