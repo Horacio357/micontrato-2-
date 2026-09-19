@@ -129,8 +129,37 @@ export const base44 = {
     },
   },
   agents: {
-    createConversation: async () => ({ id: 'conv-1' }),
-    addMessage: async () => ({}),
-    subscribeToConversation: () => {},
+    listeners: new Set(),
+    createConversation: async () => {
+      return {
+        id: 'conv-' + Date.now(),
+        messages: [
+          { role: 'assistant', content: '¡Hola! 👋 Soy el asistente virtual de micontrato.com.ar. ¿En qué puedo ayudarte hoy?' },
+        ],
+      };
+    },
+    addMessage: async (conversation, { role, content }) => {
+      if (!conversation) return;
+      if (!conversation.messages) conversation.messages = [];
+
+      try {
+        const reply = await request('/chat', {
+          method: 'POST',
+          body: JSON.stringify({ messages: [...conversation.messages, { role, content }] }),
+        });
+        if (reply?.content) {
+          conversation.messages.push({ role: 'assistant', content: reply.content });
+        }
+      } catch {
+        conversation.messages.push({ role: 'assistant', content: 'Disculpa, no pude procesar la respuesta.' });
+      }
+
+      base44.agents.listeners.forEach((cb) => cb(conversation));
+      return conversation;
+    },
+    subscribeToConversation: (id, callback) => {
+      base44.agents.listeners.add(callback);
+      return () => base44.agents.listeners.delete(callback);
+    },
   },
 };

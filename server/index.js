@@ -7,6 +7,7 @@ import authRouter, { authenticateToken } from './routes/auth.js';
 import entitiesRouter from './routes/entities.js';
 import functionsRouter from './routes/functions.js';
 import uploadRouter from './routes/upload.js';
+import chatRouter from './routes/chat.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/entities', entitiesRouter);
 app.use('/api/functions', functionsRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/chat', chatRouter);
 
 // Static uploaded files
 const uploadsPath = path.join(process.cwd(), 'public', 'uploads');
