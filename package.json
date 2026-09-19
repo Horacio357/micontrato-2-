@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "prisma generate --schema=prisma/schema.prisma && vite build",
+    "build": "node -e \"process.env.DATABASE_URL=process.env.DATABASE_URL||'postgresql://placeholder:placeholder@localhost:5432/placeholder'; require('child_process').execSync('npx prisma generate --schema=prisma/schema.prisma && npx vite build', {stdio:'inherit'})\"",
     "start": "npx prisma db push --skip-generate && node server/index.js",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
