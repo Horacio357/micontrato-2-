@@ -99,8 +99,8 @@ export default function ContractDownload() {
     queryClient.invalidateQueries({ queryKey: ["my-contracts"] });
   };
 
-  const [showFeedback, setShowFeedback] = useState(false);
-  const { downloading: downloadingDocx, download: handleDownloadDocx } = useDocxDownload(contractId, () => setShowFeedback(true), contract);
+  const contractForDocx = contract ? { ...contract, generated_text: generatedText || contract.generated_text } : null;
+  const { downloading: downloadingDocx, download: handleDownloadDocx } = useDocxDownload(contractId, () => setShowFeedback(true), contractForDocx);
 
   const [sendingEmail, setSendingEmail] = useState(false);
 
