@@ -158,9 +158,17 @@ export default function Wizard() {
         form_data: sanitizedFormData,
         generated_text: file_url,
       };
-      const generated = editId
-        ? await base44.entities.GeneratedContract.update(editId, contractData)
-        : await base44.entities.GeneratedContract.create({ ...contractData, status: "pending_payment" });
+      let generated;
+      try {
+        generated = editId
+          ? await base44.entities.GeneratedContract.update(editId, contractData)
+          : await base44.entities.GeneratedContract.create({ ...contractData, status: "pending_payment" });
+      } catch (dbErr) {
+        console.warn("Save entity to DB failed, falling back to local storage:", dbErr);
+        const fallbackId = editId || `local_${Date.now()}`;
+        generated = { id: fallbackId, ...contractData, status: "pending_payment", created_at: new Date().toISOString() };
+        localStorage.setItem(`contract_${fallbackId}`, JSON.stringify(generated));
+      }
 
       base44.functions.invoke('sendContractEmail', { contractId: generated.id }).catch(() => {});
 

@@ -2,12 +2,17 @@ import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
-export default function useDocxDownload(contractId, onDownloaded) {
+export default function useDocxDownload(contractId, onDownloaded, contractData = null) {
   const [downloading, setDownloading] = useState(false);
   const download = async () => {
     setDownloading(true);
     try {
-      const { data } = await base44.functions.invoke('exportContractDocx', { contractId });
+      const payload = { contractId };
+      if (contractData) {
+        payload.generatedText = contractData.generated_text;
+        payload.templateName = contractData.template_name;
+      }
+      const { data } = await base44.functions.invoke('exportContractDocx', payload);
       const bytes = Uint8Array.from(atob(data.base64), (char) => char.charCodeAt(0));
       const url = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
       const link = document.createElement('a');

@@ -37,14 +37,34 @@ export default function ContractDownload() {
 
   const { data: contract, isLoading: loadingContract } = useQuery({
     queryKey: ["contract-download", contractId],
-    queryFn: () => base44.entities.GeneratedContract.filter({ id: contractId }),
+    queryFn: async () => {
+      if (contractId?.startsWith("local_")) {
+        const item = localStorage.getItem(`contract_${contractId}`);
+        return item ? [JSON.parse(item)] : [];
+      }
+      try {
+        const res = await base44.entities.GeneratedContract.filter({ id: contractId });
+        if (res && res.length > 0) return res;
+      } catch (e) {
+        console.warn("Error fetching contract download from API:", e);
+      }
+      const item = localStorage.getItem(`contract_${contractId}`);
+      return item ? [JSON.parse(item)] : [];
+    },
     select: (data) => data[0],
     staleTime: 60_000,
   });
 
   const { data: signatures = [], isLoading: loadingSigs } = useQuery({
     queryKey: ["contract-signatures", contractId],
-    queryFn: () => base44.entities.ContractSignature.filter({ contract_id: contractId }),
+    queryFn: async () => {
+      if (contractId?.startsWith("local_")) return [];
+      try {
+        return await base44.entities.ContractSignature.filter({ contract_id: contractId });
+      } catch (e) {
+        return [];
+      }
+    },
     enabled: !!contractId,
     staleTime: 30_000,
   });
@@ -80,7 +100,7 @@ export default function ContractDownload() {
   };
 
   const [showFeedback, setShowFeedback] = useState(false);
-  const { downloading: downloadingDocx, download: handleDownloadDocx } = useDocxDownload(contractId, () => setShowFeedback(true));
+  const { downloading: downloadingDocx, download: handleDownloadDocx } = useDocxDownload(contractId, () => setShowFeedback(true), contract);
 
   const [sendingEmail, setSendingEmail] = useState(false);
 

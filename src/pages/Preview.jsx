@@ -15,7 +15,20 @@ export default function Preview() {
 
   const { data: contract, isLoading } = useQuery({
     queryKey: ["contract", contractId],
-    queryFn: () => base44.entities.GeneratedContract.filter({ id: contractId }),
+    queryFn: async () => {
+      if (contractId?.startsWith("local_")) {
+        const item = localStorage.getItem(`contract_${contractId}`);
+        return item ? [JSON.parse(item)] : [];
+      }
+      try {
+        const res = await base44.entities.GeneratedContract.filter({ id: contractId });
+        if (res && res.length > 0) return res;
+      } catch (e) {
+        console.warn("Error fetching contract from API:", e);
+      }
+      const item = localStorage.getItem(`contract_${contractId}`);
+      return item ? [JSON.parse(item)] : [];
+    },
     select: (data) => data[0],
     staleTime: 60_000,
     retry: 2,

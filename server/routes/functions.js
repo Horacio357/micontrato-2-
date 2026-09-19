@@ -32,13 +32,24 @@ router.post('/generateContractAI', async (req, res) => {
 // 2. exportContractDocx
 router.post('/exportContractDocx', async (req, res) => {
   try {
-    const { contractId } = req.body;
-    if (!contractId) return res.status(400).json({ error: 'Falta contractId' });
+    const { contractId, generatedText, templateName } = req.body;
+    if (!contractId && !generatedText) return res.status(400).json({ error: 'Falta contractId o generatedText' });
 
-    const contract = await prisma.generatedContract.findUnique({ where: { id: contractId } });
-    if (!contract) return res.status(404).json({ error: 'Contrato no encontrado' });
+    let source = generatedText || '';
+    let docTemplateName = templateName || 'contrato';
 
-    let source = contract.generated_text || '';
+    if (contractId && !contractId.startsWith('local_')) {
+      try {
+        const contract = await prisma.generatedContract.findUnique({ where: { id: contractId } });
+        if (contract) {
+          if (contract.generated_text) source = contract.generated_text;
+          if (contract.template_name) docTemplateName = contract.template_name;
+        }
+      } catch (dbErr) {
+        console.warn('DB lookup failed in exportContractDocx, using fallback payload:', dbErr);
+      }
+    }
+
     let text = source;
     try {
       const parsed = JSON.parse(source);
@@ -90,7 +101,7 @@ router.post('/exportContractDocx', async (req, res) => {
     });
 
     const base64 = await Packer.toBase64String(doc);
-    const safeName = (contract.template_name || 'contrato').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g, '').trim() || 'contrato';
+    const safeName = (docTemplateName || 'contrato').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g, '').trim() || 'contrato';
     return res.json({ base64, filename: `${safeName}.docx` });
   } catch (error) {
     return res.status(500).json({ error: error.message });
