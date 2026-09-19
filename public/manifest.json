@@ -1,0 +1,43 @@
+{
+  "name": "micontrato — Contratos Legales",
+  "short_name": "micontrato",
+  "description": "Creá contratos legales personalizados para Argentina en minutos.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#15294b",
+  "orientation": "portrait-primary",
+  "lang": "es-AR",
+  "categories": ["legal", "productivity", "business"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Crear contrato",
+      "short_name": "Crear",
+      "description": "Empezar un nuevo contrato",
+      "url": "/crear",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mis contratos",
+      "short_name": "Mis contratos",
+      "description": "Ver mis contratos",
+      "url": "/mis-contratos",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": []
+}

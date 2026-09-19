@@ -1,0 +1,26 @@
+{
+  "name": "ContractFeedback",
+  "type": "object",
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "description": "ID del contrato descargado sobre el que se da feedback"
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Nombre del contrato"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Calificaci\u00f3n de 1 a 5 estrellas"
+    },
+    "comment": {
+      "type": "string",
+      "description": "Comentario opcional del usuario"
+    }
+  },
+  "required": [
+    "contract_id",
+    "rating"
+  ]
+}

@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap&font-display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: 'DM Sans', sans-serif;
+    --font-display: 'Cormorant Garamond', serif;
+    --background: 210 20% 98%;
+    --foreground: 215 28% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+    --primary: 215 50% 16%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 210 18% 95%;
+    --secondary-foreground: 215 28% 17%;
+    --muted: 210 14% 93%;
+    --muted-foreground: 215 14% 46%;
+    --accent: 207 100% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 20% 90%;
+    --input: 214 20% 90%;
+    --ring: 207 100% 42%;
+    --chart-1: 207 100% 42%;
+    --chart-2: 215 50% 16%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0rem;
+    --sidebar-background: 215 50% 16%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 207 100% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 45% 22%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 215 40% 25%;
+    --sidebar-ring: 207 100% 42%;
+  }
+
+  .dark {
+    --background: 215 50% 8%;
+    --foreground: 210 20% 98%;
+    --card: 215 45% 12%;
+    --card-foreground: 210 20% 98%;
+    --popover: 215 45% 12%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 40% 18%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 35% 15%;
+    --muted-foreground: 215 14% 60%;
+    --accent: 207 100% 42%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 30% 20%;
+    --input: 215 30% 20%;
+    --ring: 207 100% 42%;
+    --chart-1: 207 100% 42%;
+    --chart-2: 215 50% 40%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 215 50% 6%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 207 100% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 45% 14%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 215 40% 15%;
+    --sidebar-ring: 207 100% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    /* Eliminate tap highlight on mobile */
+    -webkit-tap-highlight-color: transparent;
+    /* Smoother font rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Better box-sizing */
+    box-sizing: border-box;
+  }
+
+  html {
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+    /* Prevent iOS text size adjustment on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    /* iOS safe area support */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior: none;
+    /* Better touch scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Fixed elements account for safe areas */
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+  /* Prevent iOS input zoom (inputs below 16px font-size trigger zoom) */
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+
+  /* Focus visible — keyboard only, not touch */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+  :focus-visible {
+    @apply outline-2 outline-ring outline-offset-2;
+  }
+
+  /* Improve touch target sizes on mobile */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Scrollbar styling (desktop) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
+  }
+}
+
+/* Offline banner utility */
+@layer utilities {
+  .offline-hidden {
+    display: none;
+  }
+}

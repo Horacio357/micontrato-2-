@@ -1,0 +1,112 @@
+{
+  "name": "ContractSignature",
+  "type": "object",
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "description": "ID del contrato firmado"
+    },
+    "signer_name": {
+      "type": "string",
+      "description": "Nombre completo del firmante"
+    },
+    "signer_email": {
+      "type": "string",
+      "description": "Email del firmante"
+    },
+    "signer_dni": {
+      "type": "string",
+      "description": "DNI del firmante"
+    },
+    "party_role": {
+      "type": "string",
+      "enum": [
+        "part_a",
+        "part_b",
+        "witness"
+      ],
+      "description": "Rol del firmante en el contrato"
+    },
+    "signature_image": {
+      "type": "string",
+      "description": "Imagen de la firma en base64 (data URL)"
+    },
+    "signed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora exacta de la firma"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "Direcci\u00f3n IP del firmante al momento de firmar"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "Navegador y dispositivo del firmante"
+    },
+    "geolocation": {
+      "type": "string",
+      "description": "Geolocalizaci\u00f3n aproximada (ciudad, pa\u00eds)"
+    },
+    "signature_hash": {
+      "type": "string",
+      "description": "Hash SHA-256 de verificaci\u00f3n del documento firmado"
+    },
+    "terms_accepted": {
+      "type": "boolean",
+      "description": "El firmante acept\u00f3 los t\u00e9rminos y condiciones de firma"
+    },
+    "declaration_accepted": {
+      "type": "boolean",
+      "description": "El firmante declar\u00f3 que los datos son correctos"
+    }
+  },
+  "required": [
+    "contract_id",
+    "signer_name",
+    "party_role",
+    "signature_image",
+    "signed_at"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

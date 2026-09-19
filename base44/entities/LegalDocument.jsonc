@@ -1,0 +1,22 @@
+{
+  "name": "LegalDocument",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "Identificador \u00fanico del documento: tos, privacy, disclaimer"
+    },
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo del documento"
+    },
+    "content": {
+      "type": "string",
+      "description": "Contenido del documento legal"
+    }
+  },
+  "required": [
+    "key",
+    "title"
+  ]
+}

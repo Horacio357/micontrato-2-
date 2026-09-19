@@ -1,0 +1,45 @@
+{
+  "name": "ContractGenerationError",
+  "type": "object",
+  "properties": {
+    "contract_slug": {
+      "type": "string",
+      "description": "Slug del contrato que se intent\u00f3 generar"
+    },
+    "province": {
+      "type": "string",
+      "description": "Provincia seleccionada"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Mensaje de la excepci\u00f3n"
+    },
+    "error_stack": {
+      "type": "string",
+      "description": "Stack trace de la excepci\u00f3n"
+    },
+    "failed_field": {
+      "type": "string",
+      "description": "Campo (clave anidada de la plantilla) que caus\u00f3 la excepci\u00f3n, si se pudo determinar"
+    },
+    "failed_block": {
+      "type": "string",
+      "description": "Bloque/cl\u00e1usula donde ocurri\u00f3 la excepci\u00f3n"
+    },
+    "missing_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Campos de la plantilla que no se pudieron resolver desde form_data (valor nulo)"
+    },
+    "form_data": {
+      "type": "object",
+      "description": "Datos del formulario enviados al momento del error"
+    }
+  },
+  "required": [
+    "contract_slug",
+    "error_message"
+  ]
+}

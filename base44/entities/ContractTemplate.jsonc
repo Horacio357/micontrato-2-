@@ -1,0 +1,105 @@
+{
+  "name": "ContractTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nombre del contrato"
+    },
+    "slug": {
+      "type": "string",
+      "description": "Slug URL del contrato"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "inmobiliario",
+        "laboral",
+        "comercial",
+        "civil"
+      ],
+      "description": "Categor\u00eda del contrato"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n breve"
+    },
+    "when_to_use": {
+      "type": "string",
+      "description": "Cu\u00e1ndo usar este contrato"
+    },
+    "estimated_time": {
+      "type": "number",
+      "description": "Tiempo estimado en minutos"
+    },
+    "price": {
+      "type": "number",
+      "description": "Precio en ARS"
+    },
+    "available_provinces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Provincias disponibles"
+    },
+    "form_steps": {
+      "type": "array",
+      "description": "Pasos del formulario wizard",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "placeholder": {
+                  "type": "string"
+                },
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "template_text": {
+      "type": "string",
+      "description": "Texto base del contrato con variables {{variable}}"
+    },
+    "field_map": {
+      "type": "object",
+      "description": "Mapeo maestro entre variables de plantilla y payload"
+    },
+    "generation_rules": {
+      "type": "object",
+      "description": "Reglas deterministas para bloques condicionales"
+    }
+  },
+  "required": [
+    "name",
+    "slug",
+    "category"
+  ]
+}

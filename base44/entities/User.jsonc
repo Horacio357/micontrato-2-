@@ -1,0 +1,41 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "description": "The role of the user in the app",
+      "enum": [
+        "admin",
+        "user"
+      ]
+    },
+    "subscription_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "active",
+        "canceled",
+        "past_due"
+      ],
+      "default": "none",
+      "description": "Estado de la suscripci\u00f3n mensual del usuario"
+    },
+    "stripe_customer_id": {
+      "type": "string",
+      "description": "ID del cliente en Stripe"
+    },
+    "stripe_subscription_id": {
+      "type": "string",
+      "description": "ID de la suscripci\u00f3n activa en Stripe"
+    },
+    "subscription_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de expiraci\u00f3n de la suscripci\u00f3n actual"
+    }
+  },
+  "required": [
+    "role"
+  ]
+}

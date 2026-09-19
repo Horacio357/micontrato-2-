@@ -1,0 +1,137 @@
+{
+  "name": "GeneratedContract",
+  "type": "object",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "description": "ID de la plantilla usada"
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Nombre del contrato"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "inmobiliario",
+        "laboral",
+        "comercial",
+        "civil"
+      ]
+    },
+    "province": {
+      "type": "string",
+      "description": "Provincia seleccionada"
+    },
+    "form_data": {
+      "type": "object",
+      "description": "Datos del formulario completado"
+    },
+    "generated_text": {
+      "type": "string",
+      "description": "Texto del contrato generado"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "pending_payment",
+        "paid",
+        "downloaded",
+        "pending_signature",
+        "signed"
+      ],
+      "default": "draft"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "single",
+        "subscription"
+      ],
+      "description": "M\u00e9todo de pago elegido"
+    },
+    "pdf_url": {
+      "type": "string",
+      "description": "URL del PDF generado"
+    },
+    "docx_url": {
+      "type": "string",
+      "description": "URL del DOCX generado"
+    },
+    "signature_status": {
+      "type": "string",
+      "enum": [
+        "not_required",
+        "pending_part_a",
+        "pending_part_b",
+        "partially_signed",
+        "fully_signed"
+      ],
+      "default": "not_required",
+      "description": "Estado de las firmas digitales"
+    },
+    "signature_part_a": {
+      "type": "object",
+      "description": "Datos de firma de la Parte A"
+    },
+    "signature_part_b": {
+      "type": "object",
+      "description": "Datos de firma de la Parte B"
+    },
+    "signing_token_a": {
+      "type": "string",
+      "description": "Token \u00fanico para que Parte A firme"
+    },
+    "signing_token_b": {
+      "type": "string",
+      "description": "Token \u00fanico para que Parte B firme"
+    }
+  },
+  "required": [
+    "template_id",
+    "template_name",
+    "province"
+  ],
+  "rls": {
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
