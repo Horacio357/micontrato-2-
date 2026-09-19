@@ -1,6 +1,6 @@
-import comercialV9Json from '../../base44/functions/generateContractAI/templates/comercial-v9.ts';
-import viviendaV9Json from '../../base44/functions/generateContractAI/templates/vivienda-v9.ts';
-import temporariaV9Json from '../../base44/functions/generateContractAI/templates/temporaria-v9.ts';
+import comercialV9Json from './templates/comercial-v9.js';
+import viviendaV9Json from './templates/vivienda-v9.js';
+import temporariaV9Json from './templates/temporaria-v9.js';
 
 const PROVINCE_NAMES = {
   "caba": "Ciudad Autónoma de Buenos Aires",
