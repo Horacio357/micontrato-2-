@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "node -e \"process.env.DATABASE_URL=process.env.DATABASE_URL||'postgresql://placeholder:placeholder@localhost:5432/placeholder'; require('child_process').execSync('npx prisma generate --schema=prisma/schema.prisma && npx vite build', {stdio:'inherit'})\"",
-    "start": "npx prisma db push --skip-generate && node server/index.js",
+    "start": "node -e \"if(process.env.DATABASE_URL){try{require('child_process').execSync('npx prisma db push --skip-generate',{stdio:'inherit'})}catch(e){console.error(e)}}else{console.warn('ATENCION: Faltó configurar la variable DATABASE_URL en Railway.')}\" && node server/index.js",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
