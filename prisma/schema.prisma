@@ -1,0 +1,108 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                      String    @id @default(uuid())
+  email                   String    @unique
+  password                String
+  name                    String?
+  role                    String    @default("user")
+  subscription_status     String    @default("none")
+  stripe_customer_id      String?
+  stripe_subscription_id  String?
+  subscription_expires_at DateTime?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+}
+
+model ContractTemplate {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  category        String
+  price           Float    @default(0)
+  description     String?
+  input_schema    Json?
+  template_blocks Json?
+  is_active       Boolean  @default(true)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+}
+
+model GeneratedContract {
+  id               String   @id @default(uuid())
+  created_by_id    String
+  template_id      String
+  template_name    String
+  category         String
+  province         String
+  form_data        Json
+  generated_text   String   @db.Text
+  status           String   @default("draft")
+  payment_method   String?
+  pdf_url          String?
+  docx_url         String?
+  signature_status String   @default("not_required")
+  signature_part_a Json?
+  signature_part_b Json?
+  signing_token_a  String?
+  signing_token_b  String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+}
+
+model ContractSignature {
+  id                   String   @id @default(uuid())
+  contract_id          String
+  signer_name          String
+  signer_email         String
+  signer_dni           String?
+  party_role           String
+  signature_image      String   @db.Text
+  signed_at            DateTime @default(now())
+  ip_address           String?
+  user_agent           String?
+  geolocation          String?
+  signature_hash       String
+  terms_accepted       Boolean  @default(true)
+  declaration_accepted Boolean  @default(true)
+}
+
+model ContractFeedback {
+  id          String   @id @default(uuid())
+  contract_id String?
+  user_id     String?
+  rating      Int?
+  comment     String?
+  created_at  DateTime @default(now())
+}
+
+model ContractGenerationError {
+  id            String   @id @default(uuid())
+  user_id       String?
+  template_id   String?
+  error_message String
+  form_data     Json?
+  created_at    DateTime @default(now())
+}
+
+model LegalDocument {
+  id            String   @id @default(uuid())
+  document_type String   @unique
+  title         String
+  content       String   @db.Text
+  updated_at    DateTime @updatedAt
+}
+
+model WaitlistEmail {
+  id         String   @id @default(uuid())
+  email      String
+  province   String?
+  created_at DateTime @default(now())
+}

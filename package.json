@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "prisma generate && vite build",
+    "build": "prisma generate --schema=prisma/schema.prisma && vite build",
     "start": "node server/index.js",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
