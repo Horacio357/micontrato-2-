@@ -85,13 +85,14 @@ router.get('/:entity/:id', async (req, res) => {
 router.post('/:entity', async (req, res) => {
   try {
     const model = getModel(req.params.entity);
-    const payload = req.body;
-    if (req.user && !payload.created_by_id) {
-      payload.created_by_id = req.user.id;
+    const payload = { ...req.body };
+    if (!payload.created_by_id) {
+      payload.created_by_id = req.user?.id || 'anonymous';
     }
     const created = await model.create({ data: payload });
     res.json(created);
   } catch (error) {
+    console.error(`Error al crear entidad ${req.params.entity}:`, error);
     res.status(500).json({ error: error.message });
   }
 });

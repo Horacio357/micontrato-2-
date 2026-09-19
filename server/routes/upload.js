@@ -26,7 +26,7 @@ router.post('/', upload.single('file'), (req, res) => {
     return res.status(400).json({ error: 'No se envió ningún archivo' });
   }
   const host = req.headers.host;
-  const protocol = req.protocol;
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
   const file_url = `${protocol}://${host}/uploads/${req.file.filename}`;
   res.json({ file_url });
 });
