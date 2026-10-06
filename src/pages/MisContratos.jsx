@@ -8,10 +8,11 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  FileText, Plus, Download, Eye, Pencil, Clock, MapPin, Trash2, ChevronRight, PenLine, Shield, Search, X, ArrowRight
+  FileText, Plus, Download, Eye, Pencil, Clock, MapPin, Trash2, ChevronRight, PenLine, Shield, Search, X, ArrowRight, Sparkles
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Navbar from "@/components/landing/Navbar";
+import ProfessionalSpotlight from "@/components/tour/ProfessionalSpotlight";
 
 const statusMap = {
   draft: { label: "Borrador", className: "bg-muted text-muted-foreground border border-border" },
@@ -41,6 +42,7 @@ export default function MisContratos() {
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState("");
+  const [isTourOpen, setIsTourOpen] = useState(false);
 
   const { contracts, isLoading, isError, isFetching, retry } = useAccountContracts();
 
@@ -75,17 +77,29 @@ export default function MisContratos() {
       <div className="pt-28 pb-24 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}
-        <div className="flex items-end justify-between mb-12 border-b border-border pb-6">
+        <div data-tour="tour-panel" className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12 border-b border-border pb-6">
           <div>
             <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Panel</p>
             <h1 className="font-display text-4xl font-semibold text-foreground">Mis contratos</h1>
           </div>
-          <Link to="/crear">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-2">
-              <Plus className="w-4 h-4" />
-              Nuevo contrato
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTourOpen(true)}
+              data-tour="tour-boton-guia"
+              className="text-xs border-border text-muted-foreground hover:text-foreground gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
+              Guía rápida
             </Button>
-          </Link>
+            <Link to="/crear" data-tour="tour-nuevo-contrato">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-2">
+                <Plus className="w-4 h-4" />
+                Nuevo contrato
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Loading */}
@@ -102,6 +116,7 @@ export default function MisContratos() {
         {/* Empty */}
         {!isLoading && !isError && contracts.length === 0 && (
           <motion.div
+            data-tour="tour-lista"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center py-28"
@@ -126,7 +141,7 @@ export default function MisContratos() {
         {!isLoading && contracts.length > 0 && (
           <>
             {/* Search bar */}
-            <div className="relative mb-6">
+            <div data-tour="tour-busqueda" className="relative mb-6">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 className="pl-9 pr-9"
@@ -144,7 +159,7 @@ export default function MisContratos() {
               )}
             </div>
 
-          <div className="divide-y divide-border border-t border-b border-border">
+          <div data-tour="tour-lista" className="divide-y divide-border border-t border-b border-border">
             {contracts.filter((c) => {
               if (!search) return true;
               const q = search.toLowerCase();
@@ -152,7 +167,6 @@ export default function MisContratos() {
                 c.template_name?.toLowerCase().includes(q) ||
                 c.province?.toLowerCase().includes(q) ||
                 c.category?.toLowerCase().includes(q) ||
-                c.created_by?.toLowerCase().includes(q) ||
                 Object.values(c.form_data || {}).some((v) =>
                   String(v).toLowerCase().includes(q)
                 )
@@ -201,7 +215,7 @@ export default function MisContratos() {
                         )}
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {new Date(contract.created_date).toLocaleDateString("es-AR", {
+                          {new Date(contract.created_at).toLocaleDateString("es-AR", {
                             day: "2-digit", month: "short", year: "numeric"
                           })}
                         </span>
@@ -308,6 +322,12 @@ export default function MisContratos() {
           </p>
         )}
       </div>
+
+      {/* Tour Interactivo para Profesionales */}
+      <ProfessionalSpotlight
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+      />
     </div>
   );
 }

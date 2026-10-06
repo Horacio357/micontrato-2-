@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Download, ArrowRight, Shield, Check } from "lucide-react";
+import { Download, ArrowRight, Shield, Check, Printer } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import ContractPreview from "@/components/wizard/ContractPreview";
 import AIContractPreview from "@/components/wizard/AIContractPreview";
+import { parseContractText } from "@/lib/contractParser";
 
 export default function Preview() {
   const { contractId } = useParams();
@@ -35,20 +36,15 @@ export default function Preview() {
   });
 
   useEffect(() => {
-    if (contract?.generated_text?.startsWith('http')) {
+    if (contract?.generated_text?.startsWith("http")) {
       fetch(contract.generated_text)
         .then((r) => r.text())
         .then((raw) => {
-          try {
-            const document = JSON.parse(raw);
-            setGeneratedText(document.text || document.blocks?.map((block) => block.content).join("\n\n") || raw);
-          } catch {
-            setGeneratedText(raw);
-          }
+          setGeneratedText(parseContractText(raw));
         })
         .catch(() => {});
-    } else {
-      setGeneratedText(contract?.generated_text || '');
+    } else if (contract?.generated_text) {
+      setGeneratedText(parseContractText(contract.generated_text));
     }
   }, [contract?.generated_text]);
 
@@ -69,37 +65,55 @@ export default function Preview() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
+    <div className="min-h-screen bg-slate-100/70 print:bg-white">
+      <div className="print:hidden">
+        <Navbar />
+      </div>
 
-      {/* Sticky free banner */}
-      <div className="fixed top-16 left-0 right-0 z-40 bg-primary text-primary-foreground">
+      {/* Sticky top action banner */}
+      <div className="fixed top-16 left-0 right-0 z-40 bg-primary text-primary-foreground print:hidden shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Check className="w-4 h-4 text-accent" />
-            <span className="text-sm font-medium">Tu contrato está listo y disponible gratis.</span>
+            <Check className="w-4 h-4 text-emerald-400" />
+            <span className="text-sm font-medium">Tu contrato está listo y disponible en formato oficial.</span>
           </div>
-          <Link to={`/mi-cuenta/contrato/${contract.id}`}>
-            <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              Descargar
-              <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+          <div className="flex items-center gap-2.5">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.print()}
+              className="bg-white/10 hover:bg-white/20 text-white border-white/25 text-xs sm:text-sm font-medium"
+            >
+              <Printer className="w-3.5 h-3.5 mr-1.5" />
+              Imprimir / PDF
             </Button>
-          </Link>
+            <Link to={`/mi-cuenta/contrato/${contract.id}`}>
+              <Button size="sm" className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs sm:text-sm">
+                Descargar Word
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="pt-36 pb-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Preview */}
+      {/* Main preview container */}
+      <div className="pt-32 sm:pt-36 pb-20 max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 print:pt-0 print:pb-0 print:px-0 print:max-w-none">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
+          className="mb-12 print:mb-0"
         >
           {generatedText ? (
-            <AIContractPreview text={generatedText} blurred={false} />
+            <AIContractPreview
+              text={generatedText}
+              blurred={false}
+              formData={contract.form_data || {}}
+              contract={contract}
+            />
           ) : (
             <ContractPreview
-              contractName={contract.template_name}
+              contractSlug={contract.template_id}
               province={contract.province}
               formData={contract.form_data || {}}
               blurred={false}
@@ -107,19 +121,32 @@ export default function Preview() {
           )}
         </motion.div>
 
-        {/* Free download */}
-        <div className="text-center">
+        {/* Action card below contract */}
+        <div className="text-center print:hidden bg-white rounded-2xl shadow-sm border border-slate-200/80 p-8 sm:p-10 max-w-xl mx-auto">
           <Shield className="w-10 h-10 text-accent mx-auto mb-4" />
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
             Tu contrato está listo
           </h2>
-          <p className="text-muted-foreground mt-2 mb-8">Descargalo gratis en Word</p>
-          <Link to={`/mi-cuenta/contrato/${contract.id}`}>
-            <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              <Download className="w-5 h-5 mr-2" />
-              Descargar gratis
+          <p className="text-muted-foreground mt-2 mb-6 text-sm">
+            Podés imprimirlo directamente, guardarlo como PDF o descargarlo en Word editable.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => window.print()}
+              className="w-full sm:w-auto"
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir / PDF
             </Button>
-          </Link>
+            <Link to={`/mi-cuenta/contrato/${contract.id}`} className="w-full sm:w-auto">
+              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto">
+                <Download className="w-4 h-4 mr-2" />
+                Descargar en Word
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

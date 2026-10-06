@@ -2,7 +2,7 @@ import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save, Plus } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { CATEGORIES } from "@/lib/contractsData";
 import StepsEditor from "@/components/admin/StepsEditor";
 import TemplateTextEditor from "@/components/admin/TemplateTextEditor";

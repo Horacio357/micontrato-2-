@@ -43,7 +43,7 @@ const ALLOWED_FIELDS = {
     'id', 'email', 'province', 'created_at'
   ],
   User: [
-    'id', 'email', 'password', 'name', 'role', 'subscription_status',
+    'id', 'email', 'name', 'role', 'subscription_status',
     'stripe_customer_id', 'stripe_subscription_id', 'subscription_expires_at',
     'created_at', 'updated_at'
   ]
@@ -69,9 +69,38 @@ function sanitizePayload(entityName, rawPayload) {
   return clean;
 }
 
+function checkAccess(req, entityName, method) {
+  const user = req.user;
+  const role = user?.role;
+  
+  if (role === 'admin') return true;
+
+  if (method === 'GET' || method === 'POST_FILTER') {
+    if (entityName === 'ContractTemplate' || entityName === 'LegalDocument') return true;
+    return !!user;
+  }
+  
+  if (method === 'POST') {
+    if (!user) return false;
+    if (entityName === 'User' || entityName === 'ContractTemplate' || entityName === 'LegalDocument') return false;
+    return true;
+  }
+  
+  if (method === 'PUT' || method === 'DELETE') {
+    if (!user) return false;
+    if (entityName === 'User' || entityName === 'ContractTemplate' || entityName === 'LegalDocument') return false;
+    return true;
+  }
+  
+  return false;
+}
+
 // List
 router.get('/:entity', async (req, res) => {
   try {
+    if (!checkAccess(req, req.params.entity, 'GET')) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const model = getModel(req.params.entity);
     const { sort, limit } = req.query;
 
@@ -84,7 +113,11 @@ router.get('/:entity', async (req, res) => {
     }
 
     const take = limit ? parseInt(limit, 10) : undefined;
-    const items = await model.findMany({ orderBy, take });
+    const where = {};
+    if (req.params.entity === 'GeneratedContract' && req.user?.role !== 'admin') {
+      where.created_by_id = req.user.id;
+    }
+    const items = await model.findMany({ where, orderBy, take });
     res.json(items);
   } catch (error) {
     console.error(`Error list ${req.params.entity}:`, error);
@@ -95,6 +128,9 @@ router.get('/:entity', async (req, res) => {
 // Filter (via POST or GET query)
 router.post('/:entity/filter', async (req, res) => {
   try {
+    if (!checkAccess(req, req.params.entity, 'POST_FILTER')) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const model = getModel(req.params.entity);
     const { criteria = {}, sort, limit } = req.body;
 
@@ -108,6 +144,9 @@ router.post('/:entity/filter', async (req, res) => {
 
     const take = limit ? parseInt(limit, 10) : undefined;
     const cleanCriteria = sanitizePayload(req.params.entity, criteria);
+    if (req.params.entity === 'GeneratedContract' && req.user && req.user.role !== 'admin') {
+      cleanCriteria.created_by_id = req.user.id;
+    }
     const items = await model.findMany({ where: cleanCriteria, orderBy, take });
     res.json(items);
   } catch (error) {
@@ -119,10 +158,16 @@ router.post('/:entity/filter', async (req, res) => {
 // Get single
 router.get('/:entity/:id', async (req, res) => {
   try {
+    if (!checkAccess(req, req.params.entity, 'GET')) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const model = getModel(req.params.entity);
     const item = await model.findUnique({ where: { id: req.params.id } });
     if (!item) {
       return res.status(404).json({ error: 'Item no encontrado' });
+    }
+    if (req.params.entity === 'GeneratedContract' && req.user?.role !== 'admin' && item.created_by_id !== req.user.id) {
+      return res.status(403).json({ error: 'Acceso denegado' });
     }
     res.json(item);
   } catch (error) {
@@ -133,15 +178,16 @@ router.get('/:entity/:id', async (req, res) => {
 // Create
 router.post('/:entity', async (req, res) => {
   try {
+    if (!checkAccess(req, req.params.entity, 'POST')) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const entityName = req.params.entity;
     const model = getModel(entityName);
     const rawPayload = { ...req.body };
     const payload = sanitizePayload(entityName, rawPayload);
 
     if (entityName === 'GeneratedContract') {
-      if (!payload.created_by_id) {
-        payload.created_by_id = req.user?.id || 'anonymous';
-      }
+      payload.created_by_id = req.user.id;
       if (!payload.status) {
         payload.status = 'pending_payment';
       }
@@ -168,8 +214,19 @@ router.post('/:entity', async (req, res) => {
 // Update
 router.put('/:entity/:id', async (req, res) => {
   try {
+    if (!checkAccess(req, req.params.entity, 'PUT')) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const entityName = req.params.entity;
     const model = getModel(entityName);
+    
+    if (entityName === 'GeneratedContract' && req.user?.role !== 'admin') {
+      const existing = await model.findUnique({ where: { id: req.params.id } });
+      if (!existing || existing.created_by_id !== req.user.id) {
+        return res.status(403).json({ error: 'Acceso denegado' });
+      }
+    }
+
     const payload = sanitizePayload(entityName, req.body);
 
     const updated = await model.update({
@@ -186,7 +243,17 @@ router.put('/:entity/:id', async (req, res) => {
 // Delete
 router.delete('/:entity/:id', async (req, res) => {
   try {
+    if (!checkAccess(req, req.params.entity, 'DELETE')) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
     const model = getModel(req.params.entity);
+
+    if (req.params.entity === 'GeneratedContract' && req.user?.role !== 'admin') {
+      const existing = await model.findUnique({ where: { id: req.params.id } });
+      if (!existing || existing.created_by_id !== req.user.id) {
+        return res.status(403).json({ error: 'Acceso denegado' });
+      }
+    }
     await model.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
   } catch (error) {

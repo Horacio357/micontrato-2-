@@ -29,6 +29,100 @@ const PROVINCE_NAMES = {
   "tierra-del-fuego": "Provincia de Tierra del Fuego",
 };
 
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+function formatCiudadEncabezado(ciudadRaw) {
+  if (!ciudadRaw || String(ciudadRaw).trim() === "" || ciudadRaw === "___________") return "";
+  let city = String(ciudadRaw).trim();
+  if (/^caba$/i.test(city) || /ciudad aut[oó]noma de buenos aires/i.test(city)) {
+    return "la Ciudad Autónoma de Buenos Aires";
+  }
+  if (/^la ciudad de /i.test(city)) {
+    return city;
+  }
+  if (/^ciudad de /i.test(city)) {
+    return `la ${city}`;
+  }
+  return `la Ciudad de ${city}`;
+}
+
+function formatFechaEncabezado(fechaRaw, fallbackDay, fallbackMonth, fallbackYear) {
+  if (fechaRaw) {
+    const raw = String(fechaRaw).trim();
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const year = isoMatch[1];
+      const monthIdx = parseInt(isoMatch[2], 10) - 1;
+      const day = parseInt(isoMatch[3], 10);
+      const monthName = MESES[monthIdx] || isoMatch[2];
+      return day === 1
+        ? `al primer (1°) día del mes de ${monthName} de ${year}`
+        : `a los ${day} días del mes de ${monthName} de ${year}`;
+    }
+    const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (slashMatch) {
+      const day = parseInt(slashMatch[1], 10);
+      const monthIdx = parseInt(slashMatch[2], 10) - 1;
+      const year = slashMatch[3];
+      const monthName = MESES[monthIdx] || slashMatch[2];
+      return day === 1
+        ? `al primer (1°) día del mes de ${monthName} de ${year}`
+        : `a los ${day} días del mes de ${monthName} de ${year}`;
+    }
+    if (/^a los \d+/i.test(raw) || /^al primer/i.test(raw)) {
+      return raw;
+    }
+    const textMatch = raw.match(/^(\d{1,2})(?:\s*días?)?(?:\s*del\s*mes)?\s*(?:de\s+)?([a-záéíóúñ]+)\s*(?:de|del)?\s*(\d{4})$/i);
+    if (textMatch) {
+      const day = parseInt(textMatch[1], 10);
+      const monthName = textMatch[2].toLowerCase();
+      const year = textMatch[3];
+      return day === 1
+        ? `al primer (1°) día del mes de ${monthName} de ${year}`
+        : `a los ${day} días del mes de ${monthName} de ${year}`;
+    }
+    return `a los ${raw}`;
+  }
+  if (fallbackDay && fallbackMonth && fallbackYear) {
+    const day = parseInt(fallbackDay, 10);
+    const monthName = String(fallbackMonth).toLowerCase();
+    const year = fallbackYear;
+    return day === 1
+      ? `al primer (1°) día del mes de ${monthName} de ${year}`
+      : `a los ${day} días del mes de ${monthName} de ${year}`;
+  }
+  return "";
+}
+
+function buildLugarYFechaEncabezado(data = {}) {
+  const existing = String(data.cierre_encabezado_lugar_y_fecha_celebracion || "").trim();
+  if (existing && !existing.includes("___________")) {
+    return existing.replace(/^En\s+/i, "");
+  }
+
+  const rawCiudad = data.encabezado_ciudad || data.lugar_celebracion || data.cierre_ciudad_firma || data.inmueble_localidad || data.locador_localidad;
+  const ciudadFormatted = formatCiudadEncabezado(rawCiudad);
+
+  const rawFecha = data.encabezado_fecha || data.fecha_celebracion || data.cierre_fecha_firma;
+  const fechaFormatted = formatFechaEncabezado(
+    rawFecha,
+    data.cierre_dia_firma,
+    data.cierre_mes_firma,
+    data.cierre_ano_firma
+  );
+
+  if (ciudadFormatted && fechaFormatted) {
+    return `${ciudadFormatted}, ${fechaFormatted}`;
+  }
+  if (ciudadFormatted && !fechaFormatted) {
+    return `${ciudadFormatted}, a los ___________`;
+  }
+  if (!ciudadFormatted && fechaFormatted) {
+    return `___________, ${fechaFormatted}`;
+  }
+  return "___________, a los ___________";
+}
+
 const UNIDADES = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve", "veinte", "veintiuno", "veintidós", "veintitrés", "veinticuatro", "veinticinco", "veintiséis", "veintisiete", "veintiocho", "veintinueve"];
 const DECENAS = ["", "", "", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
 const CENTENAS = ["", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
@@ -102,6 +196,18 @@ const MUTUO_CLAUSULA_SEXTA_AUSENCIA = `SEXTA (Ausencia de Fiador): Las partes ac
 const MUTUO_CLAUSULA_OCTAVA_COMPLETA = `OCTAVA: (Impuesto de Sellos y Gastos de Instrumentación): Conforme a las normativas de las leyes fiscales locales y códigos tributarios de la provincia donde surta efectos legales el presente instrumento, las partes acuerdan expresamente que el costo del Impuesto de Sellos devengado por la firma de este contrato será soportado exclusivamente por el MUTUANTE. Asimismo, todos los gastos notariales, tasas de certificación de firmas y aranceles derivados de la instrumentación legal del mutuo serán afrontados por el MUTUANTE.`;
 
 const MUTUO_CLAUSULA_OCTAVA_SOLO_SELLOS = `OCTAVA: (Impuesto de Sellos): Conforme a las normativas de las leyes fiscales locales y códigos tributarios de la provincia donde surta efectos legales el presente instrumento, las partes acuerdan expresamente que el costo del Impuesto de Sellos devengado por la firma de este contrato será soportado exclusivamente por el MUTUANTE.`;
+
+const VIVIENDA_CLAUSULA_GARANTES_1 = `DECIMO SEXTA (garantes): Presentes en este acto, el señor/los señores {{garantes.g1_nombre_opcional}}, D.N.I. N° {{garantes.g1_dni_opcional}}, C.U.I.L./C.U.I.T. N° {{garantes.g1_cuit_cuil_opcional}}, nacionalidad {{garantes.g1_nacionalidad_opcional}}, mayor de edad, estado civil {{garantes.g1_estado_civil_opcional}}, con domicilio en calle {{garantes.g1_domicilio_calle_opcional}}, de la ciudad de {{garantes.g1_ciudad_opcional}}, departamento {{garantes.g1_departamento_opcional}}, de la provincia de {{garantes.g1_provincia_opcional}}, e-mail: {{garantes.g1_correo_electronico_opcional}}, se interiorizan del presente contrato de locación, y se constituyen en codeudores lisos, llanos y principales pagadores de todas las obligaciones emergentes de este contrato, en adelante denominados LOS GARANTES, renunciando al beneficio de división previa excusión.`;
+
+const VIVIENDA_CLAUSULA_GARANTES_2 = `DECIMO SEXTA (garantes): Presentes en este acto, por una parte el/la Sr./Sra. {{garantes.g1_nombre_opcional}}, D.N.I. Nº {{garantes.g1_dni_opcional}}, C.U.I.L./C.U.I.T. Nº {{garantes.g1_cuit_cuil_opcional}}, de nacionalidad {{garantes.g1_nacionalidad_opcional}}, mayor de edad, de estado civil {{garantes.g1_estado_civil_opcional}}, con domicilio en calle {{garantes.g1_domicilio_calle_opcional}}, de la ciudad de {{garantes.g1_ciudad_opcional}}, departamento/partido de {{garantes.g1_departamento_opcional}}, de la provincia de {{garantes.g1_provincia_opcional}}, correo electrónico: {{garantes.g1_correo_electronico_opcional}}; y por la otra parte el/la Sr./Sra. {{garantes.g2_nombre_opcional}}, D.N.I. Nº {{garantes.g2_dni_opcional}}, C.U.I.L./C.U.I.T. Nº {{garantes.g2_cuit_cuil_opcional}}, de nacionalidad {{garantes.g2_nacionalidad_opcional}}, mayor de edad, de estado civil {{garantes.g2_estado_civil_opcional}}, con domicilio en calle {{garantes.g2_domicilio_calle_opcional}}, de la ciudad de {{garantes.g2_ciudad_opcional}}, departamento/partido de {{garantes.g2_departamento_opcional}}, de la provincia de {{garantes.g2_provincia_opcional}}, correo electrónico: {{garantes.g2_correo_electronico_opcional}}, quienes declaran interiorizarse del presente contrato de locación, y se constituyen solidariamente en codeudores lisos, llanos y principales pagadores de todas las obligaciones emergentes de este contrato, en adelante denominados LOS GARANTES, renunciando formalmente a los beneficios de excusión y división (Arts. 1584 y 1589 del CCCN).`;
+
+const VIVIENDA_CLAUSULA_GARANTES_AUSENCIA = `DECIMO SEXTA (garantes): Las partes acuerdan expresamente que el presente contrato se celebra sin la constitución de fiadores ni garantes solidarios, siendo la PARTE LOCATARIA la única responsable por el íntegro cumplimiento de las obligaciones contractuales y legales asumidas.`;
+
+const COMERCIAL_CLAUSULA_GARANTES_ORIGINAL = `DÉCIMO SÉPTIMA: Garantía: Presentes en este acto, el señor/los señores {{garantes.g1_nombre_opcional}} DNI número {{garantes.g1_dni_opcional}} CUIT número {{garantes.g1_cuit_cuil_opcional}} correo electrónico: {{garantes.g1_correo_electronico_opcional}} con domicilio en calle {{garantes.g1_domicilio_calle_opcional}} de la ciudad de {{garantes.g1_ciudad_opcional}} del departamento/partido de {{garantes.g1_departamento_opcional}} de la provincia de {{garantes.g1_provincia_opcional}} de nacionalidad {{garantes.g1_nacionalidad_opcional}}, mayor de edad, {{garantes.g2_texto_opcional}} declara/n conocer el contenido de este contrato en todas sus partes y asume/n por el presente el carácter de garante/s solidario/s liso/s y llano/s y principal/es pagador/es por todos los alquileres e indemnizaciones, todas y cada una de las obligaciones asumidas por la parte LOCATARIA en este contrato, renunciando al beneficio de excusión y al beneficio de división, hasta que la PARTE LOCADORA sea restituida de la propiedad, libre de ocupantes y en las condiciones pactadas. Comprende los gastos y costas de los juicios que se dedujeren contra su garantido y hasta la cancelación total de las obligaciones correspondientes.`;
+
+const COMERCIAL_CLAUSULA_GARANTES_AUSENCIA = `DÉCIMO SÉPTIMA: Garantía: Las partes acuerdan expresamente que el presente contrato se celebra sin la constitución de fiadores ni garantes solidarios, asumiendo LA PARTE LOCATARIA en forma exclusiva la totalidad de las responsabilidades patrimoniales nacidas del presente vínculo contractual.`;
+
+const COMERCIAL_CLAUSULA_GARANTES_PRESENTE = `DÉCIMO SÉPTIMA: Garantía: Presentes en este acto, el/la Sr./Sra. {{garantes.g1_nombre_opcional}}, D.N.I. Nº {{garantes.g1_dni_opcional}}, C.U.I.T. Nº {{garantes.g1_cuit_cuil_opcional}}, correo electrónico: {{garantes.g1_correo_electronico_opcional}}, con domicilio en calle {{garantes.g1_domicilio_calle_opcional}}, de la ciudad de {{garantes.g1_ciudad_opcional}}, departamento/partido de {{garantes.g1_departamento_opcional}}, Provincia de {{garantes.g1_provincia_opcional}}, de nacionalidad {{garantes.g1_nacionalidad_opcional}}, mayor de edad, declara conocer el contenido de este contrato en todas sus partes y asume por el presente el carácter de garante solidario liso, llano y principal pagador por todos los alquileres e indemnizaciones, y por todas y cada una de las obligaciones asumidas por la PARTE LOCATARIA en este contrato, renunciando formal y expresamente a los beneficios de excusión y división (Arts. 1584 y 1589 del CCCN), hasta que la PARTE LOCADORA sea restituida de la propiedad, libre de ocupantes y en las condiciones pactadas. Comprende los gastos y costas de los juicios que se dedujeren contra su garantido y hasta la cancelación total de las obligaciones correspondientes.`;
 
 const MUTUO_ONEROSO = {
   field_map: {
@@ -233,9 +339,9 @@ function getViviendaV9Template() {
       .replace("DECIMO OCTAVA (domicilio electrónico)", "DECIMO NOVENA (domicilio electrónico)")
       .replace("DECIMO NOVENA (firmas e instrumentación)", "VIGÉSIMA (firmas e instrumentación)")
       .replace("VIGECIMO (lugar y fecha)", "VIGÉSIMA PRIMERA (lugar y fecha)")
-      .replace("Tribunales Ordinarios de {{cierre.centro_judicial_required}}", "tribunales ordinarios legalmente competentes")
+      .replace("Tribunales Ordinarios de {{cierre.centro_judicial_required}}", "Tribunales Ordinarios competentes de la Ciudad de {{inmueble.ciudad_inmueble_required}}, Provincia de {{inmueble.provincia_inmueble_required}}")
       .replace("{{cierre.cantidad_ejemplares_letras_required}} ({{cierre.cantidad_ejemplares_numeros_required}}) ejemplares", "dos (2) ejemplares")
-      .replace(/VIGÉSIMA PRIMERA \(lugar y fecha\):[\s\S]*$/, "VIGÉSIMA PRIMERA (lugar y fecha): El presente contrato se celebra el {{cierre.fecha_firma_required}}.");
+      .replace(/VIGÉSIMA PRIMERA \(lugar y fecha\):[\s\S]*$/, "VIGÉSIMA PRIMERA (lugar y fecha): En prueba de plena conformidad y para su fiel cumplimiento, se firman dos (2) ejemplares de un mismo tenor y a un solo efecto en la Ciudad de {{inmueble.ciudad_inmueble_required}}, Provincia de {{inmueble.provincia_inmueble_required}}, el día {{cierre.fecha_firma_required}}.");
     const field_map = { ...template.field_map, "cierre.fecha_firma_required": ["cierre_fecha_firma"] };
     ["locatario.fecha_nacimiento_required", "cierre.centro_judicial_required", "cierre.cantidad_ejemplares_letras_required", "cierre.cantidad_ejemplares_numeros_required", "cierre.ciudad_firma_required", "cierre.departamento_firma_required", "cierre.provincia_firma_required", "cierre.dia_firma_required", "cierre.mes_firma_required", "cierre.ano_firma_required"].forEach((key) => delete field_map[key]);
     [1, 2].forEach((number) => ["nombre", "dni", "cuit_cuil", "nacionalidad", "estado_civil", "domicilio_calle", "ciudad", "departamento", "provincia", "correo_electronico"].forEach((field) => {
@@ -267,7 +373,8 @@ function resolveValue(key, formData, fieldMap) {
   for (const inputName of fieldMap[key] || []) {
     const value = nestedValue(formData, inputName);
     if (value !== undefined && value !== null && String(value).trim() !== "") {
-      return key.endsWith("_letras_required") ? escribirEnLetras(value) : String(value);
+      const isRate = /interes|porcentaje|tna|tasa|moratorio|compensatorio/i.test(key) || /interes|porcentaje|tna|tasa|moratorio|compensatorio/i.test(inputName);
+      return key.endsWith("_letras_required") ? escribirEnLetras(value, isRate) : String(value);
     }
   }
   return null;
@@ -327,6 +434,8 @@ export async function buildStrictContract(slug, formData) {
         : STRICT_TEMPLATES[slug];
   if (!template) return null;
 
+  let templateText = template.template_text;
+
   if (slug === "locacion-vivienda") {
     const environmentLabels = [
       ["inmueble_cantidad_dormitorios", "dormitorio", "dormitorios"],
@@ -341,9 +450,92 @@ export async function buildStrictContract(slug, formData) {
       return `${value} ${String(value) === "1" ? singular : plural}`;
     }).filter(Boolean).join(", ") || "sin ambientes detallados";
     formData = { ...formData, inmueble_habitaciones_detalle: detail };
+
+    if (formData.inmueble_piso_departamento_aplica !== "Aplica" || formData.inmueble_piso_departamento === "No aplica") {
+      templateText = templateText.replace(", Piso/Departamento {{inmueble.piso_departamento_required}}", "");
+    }
+
+    if (formData.garantes_cantidad === "2") {
+      templateText = templateText.replace(VIVIENDA_CLAUSULA_GARANTES_1, VIVIENDA_CLAUSULA_GARANTES_2);
+    } else if (formData.garantes_cantidad === "No aplica" || !formData.garantes_cantidad || formData.garantes_cantidad === "0") {
+      templateText = templateText.replace(VIVIENDA_CLAUSULA_GARANTES_1, VIVIENDA_CLAUSULA_GARANTES_AUSENCIA);
+    }
   }
 
-  let templateText = template.template_text;
+  if (slug === "locacion-comercial") {
+    if (formData.inmueble_piso_y_numero_local_aplica !== "Aplica" || formData.inmueble_piso_y_numero_local === "No aplica" || !formData.inmueble_piso_y_numero_local) {
+      templateText = templateText.replace(", piso y número de local: {{inmueble.piso_y_numero_local_required}}", "");
+      formData = { ...formData, inmueble_piso_y_numero_local: formData.inmueble_piso_y_numero_local || "No aplica" };
+    }
+
+    const tieneGarante = formData.garantes_g1_nombre && String(formData.garantes_g1_nombre).trim() !== "" && formData.garantes_cantidad !== "No aplica";
+    if (tieneGarante) {
+      templateText = templateText.replace(COMERCIAL_CLAUSULA_GARANTES_ORIGINAL, COMERCIAL_CLAUSULA_GARANTES_PRESENTE);
+    } else {
+      templateText = templateText.replace(COMERCIAL_CLAUSULA_GARANTES_ORIGINAL, COMERCIAL_CLAUSULA_GARANTES_AUSENCIA);
+    }
+
+    const cantMeses = Number(formData.condiciones_economicas_meses_indemnizacion_menor_plazo_numeros || 1);
+    const palabraMeses = cantMeses === 1 ? "mes" : "meses";
+    templateText = templateText.replace(
+      "({{condiciones_economicas.meses_indemnizacion_menor_plazo_letras_required}}) del precio del alquiler",
+      `({{condiciones_economicas.meses_indemnizacion_menor_plazo_letras_required}}) ${palabraMeses} del precio del alquiler`
+    );
+
+    if (formData.inmueble_destino_locacion !== "Otro") {
+      templateText = templateText.replace("{{inmueble.destino_locacion_required}} {{inmueble.destino_otro_opcional}}.", "{{inmueble.destino_locacion_required}}.");
+    }
+  }
+
+  if (slug === "locacion-temporaria-turistica") {
+    if (
+      !formData.cierre_encabezado_lugar_y_fecha_celebracion ||
+      formData.cierre_encabezado_lugar_y_fecha_celebracion.includes("___________")
+    ) {
+      formData = {
+        ...formData,
+        cierre_encabezado_lugar_y_fecha_celebracion: buildLugarYFechaEncabezado(formData),
+      };
+    } else {
+      formData = {
+        ...formData,
+        cierre_encabezado_lugar_y_fecha_celebracion: String(formData.cierre_encabezado_lugar_y_fecha_celebracion).replace(/^En\s+/i, ""),
+      };
+    }
+
+    if (formData.locador_piso_departamento_aplica !== "Aplica" || formData.locador_piso_departamento === "No aplica" || !formData.locador_piso_departamento) {
+      templateText = templateText.replace(", {{locador.piso_departamento_opcional}}", "");
+    }
+    if (formData.locatario_piso_departamento_aplica !== "Aplica" || formData.locatario_piso_departamento === "No aplica" || !formData.locatario_piso_departamento) {
+      templateText = templateText.replace(", {{locatario.piso_departamento_opcional}}", "");
+    }
+    if (formData.inmueble_piso_departamento_aplica !== "Aplica" || formData.inmueble_piso_departamento === "No aplica" || !formData.inmueble_piso_departamento) {
+      templateText = templateText.replace(", {{inmueble.piso_departamento_opcional}}", "");
+    }
+
+    const hasRegistro = (formData.inmueble_registro_turistico_aplica === "Aplica" || !formData.inmueble_registro_turistico_aplica) &&
+      formData.inmueble_registro_turistico &&
+      !["No aplica", "NO APLICABLE", "___________", ""].includes(String(formData.inmueble_registro_turistico).trim());
+
+    const isCaba = /caba|ciudad aut[oó]noma/i.test(String(formData.inmueble_provincia || ""));
+    const registroPlaceholder = ", inscripto en el Registro de Alquiler Temporario Turístico según la ley n° 6255 bajo el número {{inmueble.registro_turistico_opcional}}";
+
+    if (!hasRegistro) {
+      templateText = templateText.replace(registroPlaceholder, "");
+      formData = { ...formData, inmueble_registro_turistico: "" };
+    } else if (isCaba) {
+      templateText = templateText.replace(
+        registroPlaceholder,
+        ", inscripto en el Registro de Alquiler Temporario Turístico según la Ley Nº 6255 bajo el número {{inmueble.registro_turistico_opcional}}"
+      );
+    } else {
+      templateText = templateText.replace(
+        registroPlaceholder,
+        ", inscripto en el registro o habilitación turística local correspondiente bajo el número {{inmueble.registro_turistico_opcional}}"
+      );
+    }
+  }
+
   if (slug === "mutuo-oneroso") {
     const moneda = String(formData.moneda || "").trim().toLowerCase();
     const isPesos = moneda.includes("peso");

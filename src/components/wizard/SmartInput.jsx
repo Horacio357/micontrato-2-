@@ -93,7 +93,7 @@ export default function SmartInput({ field, value, onChange }) {
     ref: inputRef,
     value: value ?? "",
     onChange: handleChange,
-    placeholder: field.placeholder,
+    placeholder: field.placeholder || (field.name?.includes("hora") ? "14:00" : undefined),
     type: digitsOnly ? "text" : (isDecimal && !useCurrencyFormatting ? "number" : "text"),
     step: isDecimal && !useCurrencyFormatting && !digitsOnly ? "any" : undefined,
     maxLength: digitsOnly ? field.maxLength : (isDecimal && !useCurrencyFormatting ? undefined : (config.maxLength || undefined)),

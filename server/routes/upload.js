@@ -19,9 +19,26 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const fileFilter = (req, file, cb) => {
+  const allowedExts = ['.pdf', '.json', '.jpg', '.jpeg', '.png', '.docx'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowedExts.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Tipo de archivo no permitido'));
+  }
+};
+
+const upload = multer({ 
+  storage, 
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB
+});
 
 router.post('/', upload.single('file'), (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'No autenticado' });
+  }
   if (!req.file) {
     return res.status(400).json({ error: 'No se envió ningún archivo' });
   }

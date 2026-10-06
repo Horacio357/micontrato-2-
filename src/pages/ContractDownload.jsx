@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText, FileDown, Mail, Plus, User, ArrowLeft,
-  PenLine, Shield, CheckCircle2, Clock, Loader2
+  PenLine, Shield, CheckCircle2, Clock, Loader2, Printer
 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
@@ -18,6 +18,7 @@ import SignatureCertificate from "@/components/signature/SignatureCertificate";
 import FeedbackForm from "@/components/wizard/FeedbackForm";
 import LiteralContractText from '@/components/wizard/LiteralContractText';
 import useDocxDownload from "@/components/account/useDocxDownload";
+import { parseContractText } from "@/lib/contractParser";
 
 const sigStatusMap = {
   not_required: null,
@@ -78,16 +79,15 @@ export default function ContractDownload() {
             const document = JSON.parse(raw);
             const blocks = Array.isArray(document.blocks) ? document.blocks : [];
             setDocumentBlocks(blocks);
-            setGeneratedText(document.text || blocks.map((block) => block.content).join("\n\n"));
+            setGeneratedText(parseContractText(document));
           } catch {
-            // Conservar literalmente espacios y saltos de los documentos anteriores.
             setDocumentBlocks([{ type: 'paragraph', content: raw }]);
-            setGeneratedText(raw);
+            setGeneratedText(parseContractText(raw));
           }
         })
         .catch(() => {});
-    } else {
-      setGeneratedText(contract?.generated_text || '');
+    } else if (contract?.generated_text) {
+      setGeneratedText(parseContractText(contract.generated_text));
     }
   }, [contract?.generated_text]);
 
@@ -146,22 +146,25 @@ export default function ContractDownload() {
   const canSignB = !partBSignature;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="pt-28 pb-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Link to="/mis-contratos">
-          <Button variant="ghost" size="sm" className="mb-6 text-muted-foreground">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Mis contratos
-          </Button>
-        </Link>
+    <div className="min-h-screen bg-slate-100/70 print:bg-white">
+      <div className="print:hidden">
+        <Navbar />
+      </div>
+      <div className="pt-28 pb-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 print:pt-0 print:pb-0 print:px-0 print:max-w-none">
+        <div className="print:hidden">
+          <Link to="/mis-contratos">
+            <Button variant="ghost" size="sm" className="mb-6 text-muted-foreground">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Mis contratos
+            </Button>
+          </Link>
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-10"
-        >
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-10"
+          >
           <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mx-auto mb-4">
             <FileText className="w-8 h-8 text-accent" />
           </div>
@@ -188,10 +191,13 @@ export default function ContractDownload() {
           transition={{ delay: 0.1 }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10"
         >
-          <Card className="p-5 text-center opacity-50 cursor-not-allowed bg-muted/40">
-            <FileDown className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
-            <p className="font-semibold text-muted-foreground text-sm">Descargar PDF</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Próximamente</p>
+          <Card
+            className="p-5 text-center cursor-pointer hover:shadow-lg hover:border-accent/30 transition-all group"
+            onClick={() => window.print()}
+          >
+            <Printer className="w-7 h-7 text-accent mx-auto mb-2 group-hover:scale-110 transition-transform" />
+            <p className="font-semibold text-foreground text-sm">Imprimir / PDF</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Guardar PDF o imprimir</p>
           </Card>
 
           <Card
@@ -277,20 +283,27 @@ export default function ContractDownload() {
             onClose={() => setShowFeedback(false)}
           />
         )}
+        </div>
 
         {/* Full contract preview */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="print:m-0"
         >
           {generatedText ? (
-            <div className="bg-white rounded-xl shadow-sm border border-border p-6 sm:p-10 font-serif text-sm leading-relaxed text-gray-800">
-              <LiteralContractText text={generatedText} />
+            <div className="relative w-full max-w-[840px] mx-auto bg-white rounded-none sm:rounded-sm shadow-xl shadow-slate-300/40 border border-slate-200/90 p-8 sm:p-14 md:p-16 transition-all print:my-0 print:border-none print:shadow-none print:p-0">
+              <LiteralContractText
+                text={generatedText}
+                formData={contract?.form_data || {}}
+                contract={contract}
+                showSignatures={true}
+              />
             </div>
           ) : (
             <ContractPreview
-              contractName={contract.template_name}
+              contractSlug={contract.template_id}
               province={contract.province}
               formData={contract.form_data || {}}
               blurred={false}
@@ -299,7 +312,7 @@ export default function ContractDownload() {
         </motion.div>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 print:hidden">
           <Link to="/crear">
             <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Plus className="w-4 h-4 mr-2" />

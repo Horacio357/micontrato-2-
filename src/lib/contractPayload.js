@@ -9,6 +9,98 @@ function legalDateToIso(value) {
   return month < 0 ? value : `${match[3]}-${String(month + 1).padStart(2, '0')}-${match[1].padStart(2, '0')}`;
 }
 
+export function formatCiudadEncabezado(ciudadRaw) {
+  if (!ciudadRaw || String(ciudadRaw).trim() === '' || ciudadRaw === '___________') return '';
+  let city = String(ciudadRaw).trim();
+  if (/^caba$/i.test(city) || /ciudad aut[oó]noma de buenos aires/i.test(city)) {
+    return 'la Ciudad Autónoma de Buenos Aires';
+  }
+  if (/^la ciudad de /i.test(city)) {
+    return city;
+  }
+  if (/^ciudad de /i.test(city)) {
+    return `la ${city}`;
+  }
+  return `la Ciudad de ${city}`;
+}
+
+export function formatFechaEncabezado(fechaRaw, fallbackDay, fallbackMonth, fallbackYear) {
+  if (fechaRaw) {
+    const raw = String(fechaRaw).trim();
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const year = isoMatch[1];
+      const monthIdx = parseInt(isoMatch[2], 10) - 1;
+      const day = parseInt(isoMatch[3], 10);
+      const monthName = CONTRACT_MONTHS[monthIdx] || isoMatch[2];
+      return day === 1
+        ? `al primer (1°) día del mes de ${monthName} de ${year}`
+        : `a los ${day} días del mes de ${monthName} de ${year}`;
+    }
+    const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (slashMatch) {
+      const day = parseInt(slashMatch[1], 10);
+      const monthIdx = parseInt(slashMatch[2], 10) - 1;
+      const year = slashMatch[3];
+      const monthName = CONTRACT_MONTHS[monthIdx] || slashMatch[2];
+      return day === 1
+        ? `al primer (1°) día del mes de ${monthName} de ${year}`
+        : `a los ${day} días del mes de ${monthName} de ${year}`;
+    }
+    if (/^a los \d+/i.test(raw) || /^al primer/i.test(raw)) {
+      return raw;
+    }
+    const textMatch = raw.match(/^(\d{1,2})(?:\s*días?)?(?:\s*del\s*mes)?\s*(?:de\s+)?([a-záéíóúñ]+)\s*(?:de|del)?\s*(\d{4})$/i);
+    if (textMatch) {
+      const day = parseInt(textMatch[1], 10);
+      const monthName = textMatch[2].toLowerCase();
+      const year = textMatch[3];
+      return day === 1
+        ? `al primer (1°) día del mes de ${monthName} de ${year}`
+        : `a los ${day} días del mes de ${monthName} de ${year}`;
+    }
+    return `a los ${raw}`;
+  }
+  if (fallbackDay && fallbackMonth && fallbackYear) {
+    const day = parseInt(fallbackDay, 10);
+    const monthName = String(fallbackMonth).toLowerCase();
+    const year = fallbackYear;
+    return day === 1
+      ? `al primer (1°) día del mes de ${monthName} de ${year}`
+      : `a los ${day} días del mes de ${monthName} de ${year}`;
+  }
+  return '';
+}
+
+export function buildLugarYFechaEncabezado(data = {}) {
+  const existing = String(data.cierre_encabezado_lugar_y_fecha_celebracion || '').trim();
+  if (existing && !existing.includes('___________')) {
+    return existing.replace(/^En\s+/i, '');
+  }
+
+  const rawCiudad = data.encabezado_ciudad || data.lugar_celebracion || data.cierre_ciudad_firma || data.inmueble_localidad || data.locador_localidad;
+  const ciudadFormatted = formatCiudadEncabezado(rawCiudad);
+
+  const rawFecha = data.encabezado_fecha || data.fecha_celebracion || data.cierre_fecha_firma;
+  const fechaFormatted = formatFechaEncabezado(
+    rawFecha,
+    data.cierre_dia_firma,
+    data.cierre_mes_firma,
+    data.cierre_ano_firma
+  );
+
+  if (ciudadFormatted && fechaFormatted) {
+    return `${ciudadFormatted}, ${fechaFormatted}`;
+  }
+  if (ciudadFormatted && !fechaFormatted) {
+    return `${ciudadFormatted}, a los ___________`;
+  }
+  if (!ciudadFormatted && fechaFormatted) {
+    return `___________, ${fechaFormatted}`;
+  }
+  return '___________, a los ___________';
+}
+
 export function prepareContractPayload(contractSlug, formData) {
   const payload = { ...(formData || {}) };
   const fields = getContractSteps(contractSlug).flatMap((step) => step.fields);
@@ -71,8 +163,34 @@ export function prepareContractPayload(contractSlug, formData) {
       environment(payload.inmueble_cantidad_balcones, 'balcón', 'balcones'),
     ].filter(Boolean).join(', ') || 'sin ambientes adicionales detallados';
   }
+  if (contractSlug === 'locacion-comercial') {
+    payload.inmueble_piso_y_numero_local = payload.inmueble_piso_y_numero_local_aplica === 'Aplica'
+      ? payload.inmueble_piso_y_numero_local || '___________'
+      : 'No aplica';
+    if (payload.plazo_cantidad_meses_numeros && !payload.plazo_cantidad_anos_numeros) {
+      payload.plazo_cantidad_anos_numeros = Math.round(Number(payload.plazo_cantidad_meses_numeros) / 12) || 1;
+    }
+    if (payload.garantes_cantidad === 'No aplica') {
+      ['nombre', 'dni', 'cuit_cuil', 'correo_electronico', 'domicilio_calle', 'ciudad', 'departamento', 'provincia', 'nacionalidad'].forEach((f) => {
+        payload[`garantes_g1_${f}`] = '';
+      });
+      payload.garantes_g2_texto = '';
+    }
+  }
   if (contractSlug === 'locacion-temporaria-turistica') {
-    payload.cierre_encabezado_lugar_y_fecha_celebracion = `${payload.encabezado_ciudad || '___________'}, ${payload.encabezado_fecha || '___________'}`;
+    payload.cierre_encabezado_lugar_y_fecha_celebracion = buildLugarYFechaEncabezado(payload);
+    payload.locador_piso_departamento = payload.locador_piso_departamento_aplica === 'Aplica'
+      ? payload.locador_piso_departamento || '___________'
+      : 'No aplica';
+    payload.locatario_piso_departamento = payload.locatario_piso_departamento_aplica === 'Aplica'
+      ? payload.locatario_piso_departamento || '___________'
+      : 'No aplica';
+    payload.inmueble_piso_departamento = payload.inmueble_piso_departamento_aplica === 'Aplica'
+      ? payload.inmueble_piso_departamento || '___________'
+      : 'No aplica';
+    payload.inmueble_registro_turistico = payload.inmueble_registro_turistico_aplica === 'Aplica'
+      ? payload.inmueble_registro_turistico || ''
+      : '';
   }
   return payload;
 }
@@ -108,10 +226,41 @@ export function restoreContractFormData(contractSlug, formData) {
       if (restored[key] !== undefined && restored[key] !== null) restored[key] = String(restored[key]);
     });
   }
-  if (contractSlug === 'locacion-temporaria-turistica' && !restored.encabezado_ciudad) {
-    const combined = String(restored.cierre_encabezado_lugar_y_fecha_celebracion || '');
-    const match = combined.match(/^(.*?)[,\s]+(?:a los\s+)?(\d{1,2} de [a-záéíóú]+ de \d{4})\.?$/i);
-    if (match) { restored.encabezado_ciudad = match[1]; restored.encabezado_fecha = match[2]; }
+  if (contractSlug === 'locacion-comercial') {
+    if (!restored.inmueble_piso_y_numero_local_aplica) {
+      restored.inmueble_piso_y_numero_local_aplica = restored.inmueble_piso_y_numero_local && restored.inmueble_piso_y_numero_local !== 'No aplica' ? 'Aplica' : 'No aplica';
+    }
+    if (!restored.garantes_cantidad) {
+      restored.garantes_cantidad = restored.garantes_g1_nombre ? '1' : 'No aplica';
+    }
+  }
+  if (contractSlug === 'locacion-temporaria-turistica') {
+    if (!restored.locador_piso_departamento_aplica) {
+      restored.locador_piso_departamento_aplica = restored.locador_piso_departamento && restored.locador_piso_departamento !== 'No aplica' ? 'Aplica' : 'No aplica';
+    }
+    if (!restored.locatario_piso_departamento_aplica) {
+      restored.locatario_piso_departamento_aplica = restored.locatario_piso_departamento && restored.locatario_piso_departamento !== 'No aplica' ? 'Aplica' : 'No aplica';
+    }
+    if (!restored.inmueble_piso_departamento_aplica) {
+      restored.inmueble_piso_departamento_aplica = restored.inmueble_piso_departamento && restored.inmueble_piso_departamento !== 'No aplica' ? 'Aplica' : 'No aplica';
+    }
+    if (!restored.inmueble_registro_turistico_aplica) {
+      restored.inmueble_registro_turistico_aplica = restored.inmueble_registro_turistico && !['No aplica', 'NO APLICABLE', ''].includes(restored.inmueble_registro_turistico) ? 'Aplica' : 'No aplica';
+    }
+    if (!restored.encabezado_ciudad) {
+      const combined = String(restored.cierre_encabezado_lugar_y_fecha_celebracion || '').replace(/^En\s+/i, '');
+      const match = combined.match(/^(.*?)[,\s]+(?:(?:a los|al primer \(1°\)|al primer)\s+)?(\d{1,2}(?:\s*días?)?(?:\s*del\s*mes)?\s+de\s+[a-záéíóúñ]+\s+de\s+\d{4})\.?$/i);
+      if (match) {
+        let city = match[1].trim();
+        city = city.replace(/^la Ciudad de\s+/i, '').replace(/^la Ciudad Autónoma de\s+/i, 'Ciudad Autónoma de ');
+        restored.encabezado_ciudad = city;
+        const dateClean = match[2].replace(/\s*días?\s*del\s*mes\s*/i, ' ').trim();
+        restored.encabezado_fecha = dateClean;
+      } else {
+        restored.encabezado_ciudad = restored.lugar_celebracion || restored.cierre_ciudad_firma || restored.inmueble_localidad || '';
+        restored.encabezado_fecha = restored.fecha_celebracion || restored.cierre_fecha_firma || (restored.cierre_dia_firma && restored.cierre_mes_firma && restored.cierre_ano_firma ? `${restored.cierre_dia_firma} de ${restored.cierre_mes_firma} de ${restored.cierre_ano_firma}` : '');
+      }
+    }
   }
   fields.forEach((field) => {
     if (field.formatAsCurrency && restored[field.name] !== undefined) {

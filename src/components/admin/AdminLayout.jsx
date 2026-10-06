@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { FileText, BarChart2, DollarSign, CreditCard, Shield, ChevronRight, Home, Menu, Lock } from "lucide-react";
+import { FileText, BarChart2, DollarSign, CreditCard, Shield, ChevronRight, Home, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import BrandLogo from "@/components/ui/BrandLogo";
-
-const ADMIN_PIN = "gordo12345";
-const SESSION_KEY = "admin_unlocked";
+import { useAuth } from "@/lib/AuthContext";
 
 const navItems = [
   { to: "/admin", label: "Dashboard", icon: BarChart2, exact: true },
@@ -68,60 +66,24 @@ function NavContent({ pathname, onNavigate }) {
   );
 }
 
-function AdminPinGate({ onUnlock }) {
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState(false);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (pin === ADMIN_PIN) {
-      sessionStorage.setItem(SESSION_KEY, "1");
-      onUnlock();
-    } else {
-      setError(true);
-      setPin("");
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="bg-card border border-border p-8 w-full max-w-sm shadow-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <BrandLogo />
-        </div>
-        <p className="text-sm font-medium text-foreground mb-1">Panel de administración</p>
-        <p className="text-xs text-muted-foreground mb-6">Ingresá el código de acceso para continuar.</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <input
-              type="password"
-              autoFocus
-              value={pin}
-              onChange={(e) => { setPin(e.target.value); setError(false); }}
-              placeholder="Código de acceso"
-              className={`w-full border px-4 py-3 text-sm bg-background text-foreground outline-none focus:border-accent transition-colors ${error ? "border-destructive" : "border-border"}`}
-            />
-            {error && <p className="text-xs text-destructive mt-1">Código incorrecto. Intentá de nuevo.</p>}
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-sm font-medium py-3 transition-colors flex items-center justify-center gap-2"
-          >
-            <Lock className="w-4 h-4" /> Ingresar
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 export default function AdminLayout() {
   const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem(SESSION_KEY) === "1");
+  const { user } = useAuth();
 
-  if (!unlocked) {
-    return <AdminPinGate onUnlock={() => setUnlocked(true)} />;
+  if (user?.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="bg-card border border-border p-8 w-full max-w-sm shadow-sm text-center rounded-lg">
+          <BrandLogo className="mx-auto mb-6" />
+          <h1 className="text-lg font-semibold text-foreground mb-2">Acceso Denegado</h1>
+          <p className="text-sm text-muted-foreground mb-6">No tienes permisos de administrador para ver esta página.</p>
+          <Link to="/" className="inline-flex h-10 items-center justify-center rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            Volver al inicio
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   const currentItem = navItems.find(({ to, exact }) =>

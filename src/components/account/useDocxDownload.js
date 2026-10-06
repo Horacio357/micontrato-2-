@@ -23,7 +23,7 @@ export default function useDocxDownload(contractId, onDownloaded, contractData =
       toast.success('Documento DOCX descargado correctamente');
       onDownloaded?.();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'No se pudo generar el documento Word');
+      toast.error(error.message || 'No se pudo generar el documento Word');
     } finally {
       setDownloading(false);
     }

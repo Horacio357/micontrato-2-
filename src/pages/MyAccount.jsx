@@ -47,7 +47,7 @@ export default function MyAccount() {
             <User className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">{user?.full_name || "Mi cuenta"}</h1>
+            <h1 className="text-2xl font-bold text-foreground">{user?.name || "Mi cuenta"}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{user?.email}</p>
           </div>
         </motion.div>
@@ -138,7 +138,7 @@ export default function MyAccount() {
                               )}
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {new Date(contract.created_date).toLocaleDateString("es-AR", {
+                                {new Date(contract.created_at).toLocaleDateString("es-AR", {
                                   day: "2-digit", month: "short", year: "numeric"
                                 })}
                               </span>

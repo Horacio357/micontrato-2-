@@ -1,13 +1,15 @@
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogIn } from "lucide-react";
 
 export default function RequireAuth({ children }) {
   const { isAuthenticated, isLoadingAuth, authChecked } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
+    navigate(`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`);
   };
 
   if (isLoadingAuth || !authChecked) {

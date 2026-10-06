@@ -551,44 +551,112 @@ export const DEFAULT_WIZARD_STEPS = [
   },
 ];
 
-const COMMERCIAL_V9_GROUPS = [
-  ["Datos del Locador", ["locador_nombre_completo", "locador_dni", "locador_cuit_cuil", "locador_correo_electronico", "locador_domicilio", "locador_ciudad", "locador_departamento_partido", "locador_provincia"]],
-  ["Datos del Locatario", ["locatario_nombre_completo", "locatario_dni", "locatario_cuit_cuil", "locatario_correo_electronico", "locatario_domicilio", "locatario_ciudad", "locatario_departamento_partido", "locatario_provincia"]],
-  ["Datos del Inmueble", ["inmueble_calle", "inmueble_altura", "inmueble_piso_y_numero_local", "inmueble_nomenclatura_catastral", "inmueble_partida_inmobiliaria", "inmueble_destino_locacion", "inmueble_destino_otro"]],
-  ["Plazo", ["plazo_cantidad_meses_numeros", "plazo_cantidad_anos_numeros", "plazo_inicio_dia", "plazo_inicio_mes", "plazo_inicio_ano", "plazo_fin_dia", "plazo_fin_mes", "plazo_fin_ano"]],
-  ["Condiciones económicas", ["condiciones_economicas_monto_mensual_numeros", "condiciones_economicas_periodo_primer_pago", "condiciones_economicas_pago_desde_dia", "condiciones_economicas_pago_hasta_dia", "condiciones_economicas_porcentaje_interes_numeros", "condiciones_economicas_primer_dia_mora", "condiciones_economicas_ultimo_dia_condonacion", "condiciones_economicas_periodo_actualizacion_meses", "condiciones_economicas_indice_actualizacion", "condiciones_economicas_indice_actualizacion_otro", "condiciones_economicas_dias_notificacion_rescision", "condiciones_economicas_dias_aviso_menor_rescision", "condiciones_economicas_meses_indemnizacion_menor_plazo_numeros", "condiciones_economicas_monto_deposito_numeros", "condiciones_economicas_dias_restitucion_deposito", "condiciones_economicas_parte_a_cargo_sellado"]],
-  ["Garante", ["garantes_g1_nombre", "garantes_g1_dni", "garantes_g1_cuit_cuil", "garantes_g1_correo_electronico", "garantes_g1_domicilio_calle", "garantes_g1_ciudad", "garantes_g1_departamento", "garantes_g1_provincia", "garantes_g1_nacionalidad", "garantes_g2_texto"]],
-  ["Cierre y firma", ["cierre_centro_judicial", "cierre_cantidad_ejemplares_numeros", "cierre_ciudad_firma", "cierre_departamento_firma", "cierre_provincia_firma", "cierre_dia_firma", "cierre_mes_firma", "cierre_ano_firma"]],
-];
-
-const COMMERCIAL_V9_OPTIONAL = new Set(["garantes_g1_nombre", "garantes_g1_dni", "garantes_g1_cuit_cuil", "garantes_g1_correo_electronico", "garantes_g1_domicilio_calle", "garantes_g1_ciudad", "garantes_g1_departamento", "garantes_g1_provincia", "garantes_g1_nacionalidad", "garantes_g2_texto"]);
-const COMMERCIAL_PROVINCES = PROVINCE_OPTIONS;
 const COMMERCIAL_MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-const COMMERCIAL_V9_FIELD_CONFIG = {
-  locador_provincia: { type: "select", options: COMMERCIAL_PROVINCES },
-  locatario_provincia: { type: "select", options: COMMERCIAL_PROVINCES },
-  garantes_g1_provincia: { type: "select", options: COMMERCIAL_PROVINCES },
-  cierre_provincia_firma: { type: "select", options: COMMERCIAL_PROVINCES },
-  plazo_inicio_mes: { type: "select", options: COMMERCIAL_MONTHS },
-  plazo_fin_mes: { type: "select", options: COMMERCIAL_MONTHS },
-  cierre_mes_firma: { type: "select", options: COMMERCIAL_MONTHS },
-  condiciones_economicas_periodo_primer_pago: { type: "select", options: ["mes", "bimestre", "trimestre", "semestre"] },
-  condiciones_economicas_indice_actualizacion: { type: "select", options: ["ICL", "IPC", "Otro"] },
-  condiciones_economicas_parte_a_cargo_sellado: { type: "select", options: ["LOCATARIA", "LOCADORA"] },
-  inmueble_destino_locacion: { type: "select", options: ["Gastronomía", "Oficina", "Consultorio", "Estudio jurídico", "Otro"] },
-  inmueble_destino_otro: { visibleWhen: { field: "inmueble_destino_locacion", value: "Otro" }, requiredWhen: { field: "inmueble_destino_locacion", value: "Otro" } },
-  condiciones_economicas_indice_actualizacion_otro: { visibleWhen: { field: "condiciones_economicas_indice_actualizacion", value: "Otro" }, requiredWhen: { field: "condiciones_economicas_indice_actualizacion", value: "Otro" } },
-};
-const COMMERCIAL_V9_STEPS = COMMERCIAL_V9_GROUPS.map(([title, names]) => ({
-  title,
-  fields: names.map((name) => ({
-    name,
-    label: name.replace(/_/g, " ").replace(/\bano\b/g, "año").replace(/\banos\b/g, "años"),
-    type: /numeros|metros|dia|ano|meses/.test(name) ? "number" : "text",
-    required: !COMMERCIAL_V9_OPTIONAL.has(name),
-    ...COMMERCIAL_V9_FIELD_CONFIG[name],
-  })),
-}));
+const comG1Visible = { field: "garantes_cantidad", value: "1" };
+
+const COMMERCIAL_V9_STEPS = [
+  {
+    title: "Datos del locador",
+    fields: [
+      { name: "locador_nombre_completo", label: "Nombre completo", required: true },
+      { name: "locador_dni", label: "DNI", required: true },
+      { name: "locador_cuit_cuil", label: "CUIT/CUIL", required: true },
+      { name: "locador_correo_electronico", label: "Correo electrónico", required: true },
+      { name: "locador_domicilio", label: "Domicilio", required: true },
+      { name: "locador_ciudad", label: "Ciudad", required: true },
+      { name: "locador_departamento_partido", label: "Departamento o partido", required: true },
+      { name: "locador_provincia", label: "Provincia", type: "select", options: PROVINCE_OPTIONS, required: true },
+    ],
+  },
+  {
+    title: "Datos del locatario",
+    fields: [
+      { name: "locatario_nombre_completo", label: "Nombre completo", required: true },
+      { name: "locatario_dni", label: "DNI", required: true },
+      { name: "locatario_cuit_cuil", label: "CUIT/CUIL", required: true },
+      { name: "locatario_correo_electronico", label: "Correo electrónico", required: true },
+      { name: "locatario_domicilio", label: "Domicilio", required: true },
+      { name: "locatario_ciudad", label: "Ciudad", required: true },
+      { name: "locatario_departamento_partido", label: "Departamento o partido", required: true },
+      { name: "locatario_provincia", label: "Provincia", type: "select", options: PROVINCE_OPTIONS, required: true },
+    ],
+  },
+  {
+    title: "Datos del inmueble",
+    fields: [
+      { name: "inmueble_calle", label: "Calle", required: true },
+      { name: "inmueble_altura", label: "Altura", required: true },
+      { name: "inmueble_piso_y_numero_local_aplica", label: "Piso y número de local", type: "select", options: ["Aplica", "No aplica"], required: true },
+      { name: "inmueble_piso_y_numero_local", label: "Indicar piso y número de local", visibleWhen: { field: "inmueble_piso_y_numero_local_aplica", value: "Aplica" }, requiredWhen: { field: "inmueble_piso_y_numero_local_aplica", value: "Aplica" } },
+      { name: "inmueble_nomenclatura_catastral", label: "Nomenclatura catastral", required: true },
+      { name: "inmueble_partida_inmobiliaria", label: "Partida inmobiliaria", required: true },
+      { name: "inmueble_destino_locacion", label: "Destino de la locación (rubro o destino)", type: "select", options: ["Gastronomía", "Oficina", "Consultorio", "Estudio jurídico", "Otro"], required: true },
+      { name: "inmueble_destino_otro", label: "Especificar otro destino", visibleWhen: { field: "inmueble_destino_locacion", value: "Otro" }, requiredWhen: { field: "inmueble_destino_locacion", value: "Otro" } },
+    ],
+  },
+  {
+    title: "Plazo del contrato",
+    fields: [
+      { name: "plazo_cantidad_meses_numeros", label: "Plazo en meses", type: "number", required: true },
+      { name: "plazo_inicio_dia", label: "Día de inicio", type: "number", required: true },
+      { name: "plazo_inicio_mes", label: "Mes de inicio", type: "select", options: COMMERCIAL_MONTHS, required: true },
+      { name: "plazo_inicio_ano", label: "Año de inicio", type: "number", required: true },
+      { name: "plazo_fin_dia", label: "Día de finalización", type: "number", required: true },
+      { name: "plazo_fin_mes", label: "Mes de finalización", type: "select", options: COMMERCIAL_MONTHS, required: true },
+      { name: "plazo_fin_ano", label: "Año de finalización", type: "number", required: true },
+    ],
+  },
+  {
+    title: "Condiciones económicas",
+    fields: [
+      { name: "condiciones_economicas_monto_mensual_numeros", label: "Monto mensual", type: "text", formatAsCurrency: true, required: true },
+      { name: "condiciones_economicas_periodo_primer_pago", label: "Periodo de vigencia del precio inicial", type: "select", options: ["mes", "bimestre", "trimestre", "semestre"], required: true },
+      { name: "condiciones_economicas_pago_desde_dia", label: "Día de pago desde (ej: 1)", type: "number", required: true },
+      { name: "condiciones_economicas_pago_hasta_dia", label: "Día de pago hasta (ej: 10)", type: "number", required: true },
+      { name: "condiciones_economicas_porcentaje_interes_numeros", label: "Interés mensual por mora (%)", type: "number", required: true },
+      { name: "condiciones_economicas_primer_dia_mora", label: "Día a partir del cual corre la mora (ej: 11)", type: "number", required: true },
+      { name: "condiciones_economicas_ultimo_dia_condonacion", label: "Último día de gracia sin interés (ej: 10)", type: "number", required: true },
+      { name: "condiciones_economicas_periodo_actualizacion_meses", label: "Actualización de precio cada cuántos meses", type: "number", required: true },
+      { name: "condiciones_economicas_indice_actualizacion", label: "Índice de actualización", type: "select", options: ["ICL", "IPC", "Otro"], required: true },
+      { name: "condiciones_economicas_indice_actualizacion_otro", label: "Especificar otro índice", visibleWhen: { field: "condiciones_economicas_indice_actualizacion", value: "Otro" }, requiredWhen: { field: "condiciones_economicas_indice_actualizacion", value: "Otro" } },
+      { name: "condiciones_economicas_dias_notificacion_rescision", label: "Días de anticipación para rescisión sin indemnización (ej: 60)", type: "number", required: true },
+      { name: "condiciones_economicas_dias_aviso_menor_rescision", label: "Días de aviso menor para rescisión (ej: 30)", type: "number", required: true },
+      { name: "condiciones_economicas_meses_indemnizacion_menor_plazo_numeros", label: "Meses de indemnización si aviso es menor (ej: 1)", type: "number", required: true },
+      { name: "condiciones_economicas_monto_deposito_numeros", label: "Monto del depósito en garantía", type: "text", formatAsCurrency: true, required: true },
+      { name: "condiciones_economicas_dias_restitucion_deposito", label: "Días para restitución del depósito (ej: 30)", type: "number", required: true },
+      { name: "condiciones_economicas_parte_a_cargo_sellado", label: "Sellado a cargo de", type: "select", options: ["LOCATARIA", "LOCADORA"], required: true },
+    ],
+  },
+  {
+    title: "Garantes",
+    fields: [
+      { name: "garantes_cantidad", label: "Garantes", type: "select", options: ["No aplica", "1"], required: true },
+      { name: "garantes_g1_nombre", label: "Nombre completo", visibleWhen: comG1Visible, requiredWhen: comG1Visible },
+      { name: "garantes_g1_dni", label: "DNI", visibleWhen: comG1Visible, requiredWhen: comG1Visible },
+      { name: "garantes_g1_cuit_cuil", label: "CUIT/CUIL", visibleWhen: comG1Visible, requiredWhen: comG1Visible },
+      { name: "garantes_g1_correo_electronico", label: "Correo electrónico", visibleWhen: comG1Visible, requiredWhen: comG1Visible },
+      { name: "garantes_g1_domicilio_calle", label: "Domicilio", visibleWhen: comG1Visible, requiredWhen: comG1Visible },
+      { name: "garantes_g1_ciudad", label: "Ciudad", visibleWhen: comG1Visible, requiredWhen: comG1Visible },
+      { name: "garantes_g1_departamento", label: "Departamento o partido", visibleWhen: comG1Visible, requiredWhen: comG1Visible },
+      { name: "garantes_g1_provincia", label: "Provincia", type: "select", options: PROVINCE_OPTIONS, visibleWhen: comG1Visible, requiredWhen: comG1Visible },
+      { name: "garantes_g1_nacionalidad", label: "Nacionalidad", visibleWhen: comG1Visible, requiredWhen: comG1Visible },
+      { name: "garantes_g2_texto", label: "Segundo garante (opcional)", visibleWhen: comG1Visible },
+    ],
+  },
+  {
+    title: "Cierre y firma",
+    fields: [
+      { name: "cierre_centro_judicial", label: "Jurisdicción (tribunales)", required: true },
+      { name: "cierre_cantidad_ejemplares_numeros", label: "Cantidad de ejemplares", type: "number", required: true },
+      { name: "cierre_ciudad_firma", label: "Ciudad de firma", required: true },
+      { name: "cierre_departamento_firma", label: "Departamento o partido de firma", required: true },
+      { name: "cierre_provincia_firma", label: "Provincia de firma", type: "select", options: PROVINCE_OPTIONS, required: true },
+      { name: "cierre_dia_firma", label: "Día de firma", digitsOnly: true, maxLength: 2, required: true },
+      { name: "cierre_mes_firma", label: "Mes de firma", type: "select", options: COMMERCIAL_MONTHS, required: true },
+      { name: "cierre_ano_firma", label: "Año de firma", digitsOnly: true, maxLength: 4, required: true },
+    ],
+  },
+];
 
 const ESTADOS_CIVILES = ["Soltero/a", "Casado/a", "Divorciado/a", "Viudo/a"];
 
@@ -653,45 +721,97 @@ const VIVIENDA_V9_STEPS = [
   ]},
 ];
 
-const TEMPORARIA_V9_GROUPS = [
-  ["Lugar y fecha", ["cierre_encabezado_lugar_y_fecha_celebracion"]],
-  ["Datos del Locador", ["locador_nombre_completo", "locador_dni_pasaporte", "locador_cuit_cuil", "locador_domicilio_calle", "locador_altura", "locador_piso_departamento", "locador_localidad", "locador_provincia", "locador_telefono"]],
-  ["Datos del Locatario", ["locatario_nombre_completo", "locatario_nacionalidad", "locatario_dni_pasaporte", "locatario_cuit_cuil", "locatario_domicilio_calle", "locatario_altura", "locatario_piso_departamento", "locatario_localidad", "locatario_provincia", "locatario_telefono"]],
-  ["Datos del Inmueble", ["inmueble_calle", "inmueble_altura", "inmueble_piso_departamento", "inmueble_localidad", "inmueble_provincia", "inmueble_registro_turistico"]],
-  ["Estadía", ["estadia_cantidad_dias_numeros", "estadia_inicio_dia", "estadia_inicio_mes", "estadia_inicio_ano", "estadia_inicio_hora", "estadia_fin_dia", "estadia_fin_mes", "estadia_fin_ano", "estadia_fin_hora", "normas_cantidad_huespedes"]],
-  ["Condiciones económicas", ["condiciones_economicas_precio_total_numeros", "condiciones_economicas_moneda", "condiciones_economicas_dia_pago_senia", "condiciones_economicas_porcentaje_senia", "condiciones_economicas_deposito_garantia_numeros", "condiciones_economicas_multa_diaria_demora_numeros"]],
-  ["Cierre y firma", ["cierre_centro_judicial", "cierre_cantidad_ejemplares_numeros", "cierre_ciudad_firma", "cierre_dia_firma", "cierre_mes_firma", "cierre_ano_firma"]],
-];
-
-const TEMPORARIA_V9_OPTIONAL = new Set(["locador_piso_departamento", "locatario_piso_departamento", "inmueble_registro_turistico"]);
-const TEMPORARIA_PROVINCES = PROVINCE_OPTIONS;
 const TEMPORARIA_MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-const TEMPORARIA_V9_FIELD_CONFIG = {
-  locador_provincia: { type: "select", options: TEMPORARIA_PROVINCES },
-  locatario_provincia: { type: "select", options: TEMPORARIA_PROVINCES },
-  inmueble_provincia: { type: "select", options: TEMPORARIA_PROVINCES },
-  estadia_inicio_mes: { type: "select", options: TEMPORARIA_MONTHS },
-  estadia_fin_mes: { type: "select", options: TEMPORARIA_MONTHS },
-  cierre_mes_firma: { type: "select", options: TEMPORARIA_MONTHS },
-  cierre_dia_firma: { type: "text", digitsOnly: true, maxLength: 2 },
-  cierre_ano_firma: { type: "text", digitsOnly: true, maxLength: 4 },
-  condiciones_economicas_moneda: { type: "select", options: ["Pesos Argentinos", "USD", "Euros"] },
-  condiciones_economicas_porcentaje_senia: { type: "number" },
-  normas_cantidad_huespedes: { type: "number" },
-  inmueble_registro_turistico: { options: ["NO APLICABLE"], placeholder: "Número de registro o NO APLICABLE" },
-  condiciones_economicas_deposito_garantia_numeros: { formatAsCurrency: true },
-  condiciones_economicas_multa_diaria_demora_numeros: { formatAsCurrency: true },
-};
-const TEMPORARIA_V9_STEPS = TEMPORARIA_V9_GROUPS.map(([title, names]) => ({
-  title,
-  fields: names.map((name) => ({
-    name,
-    label: name.replace(/_/g, " ").replace(/\bano\b/g, "año").replace(/\banos\b/g, "años"),
-    type: name.includes("hora") ? "time" : /numeros|_dia$|_ano$/.test(name) ? "number" : "text",
-    required: !TEMPORARIA_V9_OPTIONAL.has(name),
-    ...TEMPORARIA_V9_FIELD_CONFIG[name],
-  })),
-}));
+
+const TEMPORARIA_V9_STEPS = [
+  {
+    title: "Lugar y fecha de celebración del contrato",
+    fields: [
+      { name: "cierre_encabezado_lugar_y_fecha_celebracion", label: "Lugar y fecha de celebración", required: true },
+    ],
+  },
+  {
+    title: "Datos del locador",
+    fields: [
+      { name: "locador_nombre_completo", label: "Nombre completo", required: true },
+      { name: "locador_dni_pasaporte", label: "DNI o Pasaporte", required: true },
+      { name: "locador_cuit_cuil", label: "CUIT/CUIL", required: true },
+      { name: "locador_domicilio_calle", label: "Calle (domicilio)", required: true },
+      { name: "locador_altura", label: "Altura", required: true },
+      { name: "locador_piso_departamento_aplica", label: "Piso o Departamento", type: "select", options: ["Aplica", "No aplica"], required: true },
+      { name: "locador_piso_departamento", label: "Indicar piso o departamento", visibleWhen: { field: "locador_piso_departamento_aplica", value: "Aplica" }, requiredWhen: { field: "locador_piso_departamento_aplica", value: "Aplica" } },
+      { name: "locador_localidad", label: "Localidad / Ciudad", required: true },
+      { name: "locador_provincia", label: "Provincia", type: "select", options: PROVINCE_OPTIONS, required: true },
+      { name: "locador_telefono", label: "Teléfono / WhatsApp", required: true },
+    ],
+  },
+  {
+    title: "Datos del locatario",
+    fields: [
+      { name: "locatario_nombre_completo", label: "Nombre completo", required: true },
+      { name: "locatario_nacionalidad", label: "Nacionalidad", required: true },
+      { name: "locatario_dni_pasaporte", label: "DNI o Pasaporte", required: true },
+      { name: "locatario_cuit_cuil", label: "CUIT/CUIL", required: true },
+      { name: "locatario_domicilio_calle", label: "Calle (domicilio)", required: true },
+      { name: "locatario_altura", label: "Altura", required: true },
+      { name: "locatario_piso_departamento_aplica", label: "Piso o Departamento", type: "select", options: ["Aplica", "No aplica"], required: true },
+      { name: "locatario_piso_departamento", label: "Indicar piso o departamento", visibleWhen: { field: "locatario_piso_departamento_aplica", value: "Aplica" }, requiredWhen: { field: "locatario_piso_departamento_aplica", value: "Aplica" } },
+      { name: "locatario_localidad", label: "Localidad / Ciudad", required: true },
+      { name: "locatario_provincia", label: "Provincia", type: "select", options: PROVINCE_OPTIONS, required: true },
+      { name: "locatario_telefono", label: "Teléfono / WhatsApp", required: true },
+    ],
+  },
+  {
+    title: "Datos del inmueble",
+    fields: [
+      { name: "inmueble_calle", label: "Calle", required: true },
+      { name: "inmueble_altura", label: "Altura", required: true },
+      { name: "inmueble_piso_departamento_aplica", label: "Piso o Departamento", type: "select", options: ["Aplica", "No aplica"], required: true },
+      { name: "inmueble_piso_departamento", label: "Indicar piso o departamento", visibleWhen: { field: "inmueble_piso_departamento_aplica", value: "Aplica" }, requiredWhen: { field: "inmueble_piso_departamento_aplica", value: "Aplica" } },
+      { name: "inmueble_localidad", label: "Localidad / Ciudad", required: true },
+      { name: "inmueble_provincia", label: "Provincia", type: "select", options: PROVINCE_OPTIONS, required: true },
+      { name: "inmueble_registro_turistico_aplica", label: "Registro o habilitación turística", type: "select", options: ["Aplica", "No aplica"], required: true },
+      { name: "inmueble_registro_turistico", label: "N° de registro / habilitación turística", visibleWhen: { field: "inmueble_registro_turistico_aplica", value: "Aplica" }, requiredWhen: { field: "inmueble_registro_turistico_aplica", value: "Aplica" } },
+    ],
+  },
+  {
+    title: "Estadía",
+    fields: [
+      { name: "estadia_cantidad_dias_numeros", label: "Cantidad de días", type: "number", required: true },
+      { name: "estadia_inicio_dia", label: "Día de ingreso", type: "number", required: true },
+      { name: "estadia_inicio_mes", label: "Mes de ingreso", type: "select", options: TEMPORARIA_MONTHS, required: true },
+      { name: "estadia_inicio_ano", label: "Año de ingreso", type: "number", required: true },
+      { name: "estadia_inicio_hora", label: "Horario de check-in (ej: 14:00)", type: "time", required: true, placeholder: "14:00" },
+      { name: "estadia_fin_dia", label: "Día de egreso", type: "number", required: true },
+      { name: "estadia_fin_mes", label: "Mes de egreso", type: "select", options: TEMPORARIA_MONTHS, required: true },
+      { name: "estadia_fin_ano", label: "Año de egreso", type: "number", required: true },
+      { name: "estadia_fin_hora", label: "Horario de check-out (ej: 10:00)", type: "time", required: true, placeholder: "10:00" },
+      { name: "normas_cantidad_huespedes", label: "Cantidad máxima de huéspedes", type: "number", required: true },
+    ],
+  },
+  {
+    title: "Precio y sanciones",
+    fields: [
+      { name: "condiciones_economicas_precio_total_numeros", label: "Precio total", type: "text", formatAsCurrency: true, required: true },
+      { name: "condiciones_economicas_moneda", label: "Moneda", type: "select", options: ["Pesos Argentinos", "USD", "Euros"], required: true },
+      { name: "condiciones_economicas_dia_pago_senia", label: "Fecha de pago de la seña", type: "date", required: true },
+      { name: "condiciones_economicas_porcentaje_senia", label: "Seña (expresada en porcentaje del total de la locación)", type: "number", required: true },
+      { name: "condiciones_economicas_deposito_garantia_numeros", label: "Monto del depósito en garantía (en la moneda ya seleccionada)", type: "text", formatAsCurrency: true, required: true },
+      { name: "condiciones_economicas_multa_diaria_demora_numeros", label: "Valor de multa diaria por demora en la entrega del inmueble (en la moneda ya seleccionada)", type: "text", formatAsCurrency: true, required: true },
+    ],
+  },
+  {
+    title: "Jurisdicción y cierre",
+    fields: [
+      { name: "cierre_centro_judicial", label: "Jurisdicción (tribunales)", required: true },
+      { name: "cierre_cantidad_ejemplares_numeros", label: "Cantidad de ejemplares", type: "number", required: true },
+      { name: "cierre_ciudad_firma", label: "Ciudad de firma", required: true },
+      { name: "cierre_dia_firma", label: "Día de firma", digitsOnly: true, maxLength: 2, required: true },
+      { name: "cierre_mes_firma", label: "Mes de firma", type: "select", options: TEMPORARIA_MONTHS, required: true },
+      { name: "cierre_ano_firma", label: "Año de firma", digitsOnly: true, maxLength: 4, required: true },
+    ],
+  },
+];
 
 export function getContractSteps(contractSlug) {
   const steps = contractSlug === 'locacion-comercial' ? COMMERCIAL_V9_STEPS

@@ -14,6 +14,9 @@ export function getFieldConfig(fieldName = "", fieldType = "text") {
   if (name.includes("telefono") || name.includes("teléfono") || name.includes("tel") || name.includes("celular")) {
     return { inputMode: "tel", pattern: null, format: formatTelefono, validate: null, maxLength: 20 };
   }
+  if (name.includes("hora") || name.includes("horario") || fieldType === "time") {
+    return { inputMode: "numeric", pattern: "[0-9:]*", format: formatHora, validate: null, maxLength: 5 };
+  }
   // Campos "_letras" son texto libre, no numérico
   if (name.includes("_letras") || name.includes("letras")) {
     return { inputMode: null, pattern: null, format: null, validate: null, maxLength: null };
@@ -92,4 +95,10 @@ export function validateCUIT(cuit) {
     return "El dígito verificador del CUIT es incorrecto";
   }
   return null;
+}
+
+export function formatHora(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return digits.slice(0, 2) + ":" + digits.slice(2);
 }

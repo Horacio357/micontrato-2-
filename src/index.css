@@ -156,3 +156,40 @@
     display: none;
   }
 }
+
+/* Legal Document Print Styles */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 20mm 15mm 20mm 15mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 11pt !important;
+  }
+
+  /* Force print background colors/graphics if needed */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Avoid orphan headers and keep signature block together */
+  h1, h2, h3, header {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  footer, .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}

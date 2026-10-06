@@ -8,6 +8,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Home from './pages/Home';
+import Login from './pages/Login';
 import SelectCategory from './pages/SelectCategory';
 import SelectContract from './pages/SelectContract';
 import SelectProvince from './pages/SelectProvince';
@@ -54,6 +55,7 @@ const AuthenticatedApp = () => {
     <>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/crear" element={<SelectCategory />} />
         <Route path="/crear/:categoria" element={<SelectContract />} />
         <Route path="/crear/:categoria/:contrato" element={<SelectProvince />} />

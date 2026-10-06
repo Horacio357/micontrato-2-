@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, FileCheck } from "lucide-react";
 import SmartInput from "./SmartInput";
 import DatePickerField from "./DatePickerField";
-import { getFieldConfig, validateCUIT } from "@/hooks/useFieldFormatter";
+import { getFieldConfig } from "@/hooks/useFieldFormatter";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { getFieldHelp } from "@/lib/fieldHelp";
 import FieldHelpTooltip from "./FieldHelpTooltip";

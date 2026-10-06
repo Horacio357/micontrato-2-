@@ -17,18 +17,28 @@ export const AuthProvider = ({ children }) => {
   const checkUserAuth = async () => {
     setIsLoadingAuth(true);
     setAuthError(null);
+
+    // Timeout de seguridad: garantiza que la interfaz nunca se quede en bucle de carga
+    const safetyTimeout = setTimeout(() => {
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
+    }, 2500);
+
     try {
       const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      // Sincronizar el estado de suscripción con Stripe apenas el usuario se loguea,
-      // así su cuenta queda vinculada y los contratos se entregan sin cobro adicional.
-      base44.functions.invoke('syncSubscriptionStatus', {}).catch(() => {});
+      if (currentUser && (currentUser.id || currentUser.email)) {
+        setUser(currentUser);
+        setIsAuthenticated(true);
+        base44.functions.invoke('syncSubscriptionStatus', {}).catch(() => {});
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
     } catch (_) {
-      // Not authenticated — that's fine, app is public
       setUser(null);
       setIsAuthenticated(false);
     } finally {
+      clearTimeout(safetyTimeout);
       setIsLoadingAuth(false);
       setAuthChecked(true);
     }
@@ -37,11 +47,11 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    base44.auth.logout(window.location.href);
+    base44.auth.logout();
   };
 
   const navigateToLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
+    window.location.href = '/login';
   };
 
   return (

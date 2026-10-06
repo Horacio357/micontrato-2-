@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { toast } from "sonner";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CONTRACTS, WIZARD_STEPS, getContractSteps, PROVINCES, PROVINCE_OPTIONS } from "@/lib/contractsData";
-import { calendarSteps } from '@/lib/contractDateFields';
+import { CONTRACTS, getContractSteps, PROVINCES } from "@/lib/contractsData";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, RefreshCw, AlertTriangle } from "lucide-react";
@@ -62,22 +60,8 @@ export default function Wizard() {
     };
   }, []);
 
-  // Los pasos locales son la fuente de verdad para las plantillas estrictas.
-  // La base queda únicamente como respaldo de contratos sin definición local.
   useEffect(() => {
-    if (!contrato || WIZARD_STEPS[contrato]) {
-      setStepsLoading(false);
-      return;
-    }
-    base44.entities.ContractTemplate.filter({ slug: contrato })
-      .then((templates) => {
-        const tmpl = templates?.[0];
-        if (tmpl?.form_steps?.length > 0) {
-          setSteps(calendarSteps(tmpl.form_steps, PROVINCE_OPTIONS));
-        }
-      })
-      .catch(() => {})
-      .finally(() => { if (isMounted.current) setStepsLoading(false); });
+    if (isMounted.current) setStepsLoading(false);
   }, [contrato]);
 
   useEffect(() => {

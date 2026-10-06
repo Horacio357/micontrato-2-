@@ -24,7 +24,7 @@ export default function AdminPlantillas() {
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["admin-templates"],
-    queryFn: () => base44.entities.ContractTemplate.list("-created_date", 200),
+    queryFn: () => base44.entities.ContractTemplate.list("-created_at", 200),
   });
 
   const deleteMutation = useMutation({

@@ -20,7 +20,7 @@ export default function AdminPagos() {
 
   const { data: contracts = [] } = useQuery({
     queryKey: ["admin-paid-contracts"],
-    queryFn: () => base44.entities.GeneratedContract.list("-created_date", 500),
+    queryFn: () => base44.entities.GeneratedContract.list("-created_at", 500),
   });
 
   const paidContracts = contracts.filter((c) => c.status === "paid" || c.status === "downloaded");
@@ -115,7 +115,7 @@ export default function AdminPagos() {
                 <div>
                   <p className="text-sm font-medium text-foreground">{c.template_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {c.province} · {new Date(c.created_date).toLocaleDateString("es-AR")} · {c.created_by}
+                    {c.province} · {new Date(c.created_at).toLocaleDateString("es-AR")}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

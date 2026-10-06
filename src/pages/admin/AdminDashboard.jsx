@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { FileText, Download, DollarSign, TrendingUp, Clock, CheckCircle } from "lucide-react";
+import { FileText, Download, DollarSign, CheckCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 export default function AdminDashboard() {
   const { data: contracts = [] } = useQuery({
     queryKey: ["admin-contracts"],
-    queryFn: () => base44.entities.GeneratedContract.list("-created_date", 200),
+    queryFn: () => base44.entities.GeneratedContract.list("-created_at", 200),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   });
   const chartData = days.map((date) => ({
     date: date.slice(5),
-    contratos: contracts.filter((c) => c.created_date?.slice(0, 10) === date).length,
+    contratos: contracts.filter((c) => c.created_at?.slice(0, 10) === date).length,
   }));
 
   // By category

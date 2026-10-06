@@ -13,6 +13,7 @@ export default function CheckoutSuccess() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get("session_id");
+    let timer;
 
     const verifyAndRedirect = async () => {
       if (sessionId) {
@@ -21,7 +22,7 @@ export default function CheckoutSuccess() {
         } catch (_) {}
       }
 
-      const timer = setInterval(() => {
+      timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
@@ -31,10 +32,10 @@ export default function CheckoutSuccess() {
           return prev - 1;
         });
       }, 1000);
-      return () => clearInterval(timer);
     };
 
     verifyAndRedirect();
+    return () => { if (timer) clearInterval(timer); };
   }, [contractId, navigate]);
 
   return (

@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CONTRACTS, CATEGORIES } from "@/lib/contractsData";
-import { Search, Edit2, Trash2, CheckCircle, Clock, MapPin, FileText } from "lucide-react";
+import { CATEGORIES } from "@/lib/contractsData";
+import { Search, Trash2, Clock, MapPin, FileText } from "lucide-react";
 
 const statusMap = {
   draft: { label: "Borrador", className: "bg-muted text-muted-foreground border-border" },
@@ -23,7 +23,7 @@ export default function AdminContratos() {
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ["admin-all-contracts"],
-    queryFn: () => base44.entities.GeneratedContract.list("-created_date", 500),
+    queryFn: () => base44.entities.GeneratedContract.list("-created_at", 500),
   });
 
   const deleteMutation = useMutation({
@@ -36,7 +36,7 @@ export default function AdminContratos() {
     const matchSearch = !search ||
       c.template_name?.toLowerCase().includes(q) ||
       c.province?.toLowerCase().includes(q) ||
-      c.created_by?.toLowerCase().includes(q) ||
+      c.created_by_id?.toLowerCase().includes(q) ||
       c.category?.toLowerCase().includes(q);
     const matchStatus = filterStatus === "all" || c.status === filterStatus;
     const matchCat = filterCat === "all" || c.category === filterCat;
@@ -108,7 +108,7 @@ export default function AdminContratos() {
                         <MapPin className="w-3 h-3" /> {c.province || "—"}
                       </span>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {new Date(c.created_date).toLocaleDateString("es-AR")}
+                        <Clock className="w-3 h-3" /> {new Date(c.created_at).toLocaleDateString("es-AR")}
                       </span>
                       <span className="text-xs text-muted-foreground">{c.created_by}</span>
                     </div>

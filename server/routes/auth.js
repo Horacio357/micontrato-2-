@@ -4,7 +4,10 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../db.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'micontrato-super-secret-key-2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('FATAL ERROR: JWT_SECRET environment variable is required');
+}
 
 export function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -30,6 +33,23 @@ export function authenticateToken(req, res, next) {
   });
 }
 
+export function requireAuth(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'No autenticado' });
+  }
+  next();
+}
+
+export function requireAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'No autenticado' });
+  }
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Acceso denegado. Se requiere rol de administrador.' });
+  }
+  next();
+}
+
 router.get('/me', (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -40,7 +60,8 @@ router.get('/me', (req, res) => {
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name, role = 'user' } = req.body;
+    const { email, password, name } = req.body;
+    const role = 'user';
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
     }

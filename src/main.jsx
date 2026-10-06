@@ -1,26 +1,26 @@
-import React, { lazy, Suspense } from 'react'
+import React from 'react'
 import ReactDOM from 'react-dom/client'
 import '@/index.css'
-
-const App = lazy(() => import('@/App.jsx'))
+import App from '@/App.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <Suspense fallback={
-    <div className="fixed inset-0 flex items-center justify-center bg-background">
-      <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
-    </div>
-  }>
-    <App />
-  </Suspense>
+  <App />
 )
 
-// Register Service Worker for offline support & PWA
+// Register Service Worker for offline support & PWA only in production
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/sw.js', { scope: '/' })
-      .catch(() => {
-        // SW registration failed silently — app still works online
-      });
-  });
+  if (import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/sw.js', { scope: '/' })
+        .catch(() => {});
+    });
+  } else {
+    // En desarrollo local desregistramos service workers para evitar bloqueos de caché
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
+    });
+  }
 }

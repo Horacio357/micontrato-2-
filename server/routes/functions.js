@@ -3,6 +3,9 @@ import crypto from 'node:crypto';
 import { AlignmentType, Document, Footer, PageNumber, Packer, Paragraph, TextRun } from 'docx';
 import { prisma } from '../db.js';
 import { buildStrictContract } from '../services/contractGenerator.js';
+import { Resend } from 'resend';
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const router = Router();
 
@@ -237,16 +240,37 @@ router.post('/sendContractEmail', async (req, res) => {
     if (!contractId) return res.status(400).json({ error: 'Falta contractId' });
 
     let recipientEmail = user?.email || 'usuario@micontrato.com';
+    let contractTitle = 'Contrato generado';
+    
     if (!contractId.startsWith('local_')) {
       try {
         const contract = await prisma.generatedContract.findUnique({ where: { id: contractId } });
-        if (contract && contract.created_by_id && contract.created_by_id !== 'anonymous') {
-          const creator = await prisma.user.findUnique({ where: { id: contract.created_by_id } });
-          if (creator?.email) recipientEmail = creator.email;
+        if (contract) {
+          if (contract.template_name) contractTitle = contract.template_name;
+          if (contract.created_by_id && contract.created_by_id !== 'anonymous') {
+            const creator = await prisma.user.findUnique({ where: { id: contract.created_by_id } });
+            if (creator?.email) recipientEmail = creator.email;
+          }
         }
       } catch (dbErr) {
         console.warn('DB lookup failed in sendContractEmail:', dbErr);
       }
+    }
+
+    if (resend) {
+      await resend.emails.send({
+        from: 'MiContrato <hola@micontrato.com.ar>',
+        to: [recipientEmail],
+        subject: `Tu contrato: ${contractTitle}`,
+        html: `
+          <h1>¡Hola!</h1>
+          <p>Tu contrato <strong>${contractTitle}</strong> se ha generado exitosamente y está listo para descargar o firmar.</p>
+          <p><a href="https://micontrato.com.ar/mi-cuenta/contrato/${contractId}">Ver contrato</a></p>
+          <p>Gracias por usar MiContrato.</p>
+        `,
+      });
+    } else {
+      console.log(`[Mock Email] To: ${recipientEmail}, Subject: Tu contrato: ${contractTitle}`);
     }
 
     return res.json({ ok: true, sent_to: recipientEmail });

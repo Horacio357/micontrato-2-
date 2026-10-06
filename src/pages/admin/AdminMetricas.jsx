@@ -9,7 +9,7 @@ const COLORS = ["hsl(207,100%,42%)", "hsl(215,50%,16%)", "hsl(43,74%,56%)", "hsl
 export default function AdminMetricas() {
   const { data: contracts = [] } = useQuery({
     queryKey: ["admin-metrics-contracts"],
-    queryFn: () => base44.entities.GeneratedContract.list("-created_date", 500),
+    queryFn: () => base44.entities.GeneratedContract.list("-created_at", 500),
   });
 
   // By contract type
@@ -44,8 +44,8 @@ export default function AdminMetricas() {
   });
   const dailyData = days30.map((date) => ({
     date: date.slice(5),
-    generados: contracts.filter((c) => c.created_date?.slice(0, 10) === date).length,
-    pagados: contracts.filter((c) => c.created_date?.slice(0, 10) === date && (c.status === "paid" || c.status === "downloaded")).length,
+    generados: contracts.filter((c) => c.created_at?.slice(0, 10) === date).length,
+    pagados: contracts.filter((c) => c.created_at?.slice(0, 10) === date && (c.status === "paid" || c.status === "downloaded")).length,
   }));
 
   return (

@@ -6,7 +6,7 @@ export default function useAccountContracts(recent = false) {
   const user = profile.data;
   const contracts = useQuery({
     queryKey: ['my-contracts', user?.id, recent ? 'recent' : 'all'],
-    queryFn: () => base44.entities.GeneratedContract.filter({ created_by_id: user.id }, '-created_date', recent ? 5 : 500),
+    queryFn: () => base44.entities.GeneratedContract.filter({ created_by_id: user.id }, '-created_at', recent ? 5 : 500),
     enabled: Boolean(user?.id),
     refetchOnMount: 'always',
   });
