@@ -49,19 +49,49 @@ const ALLOWED_FIELDS = {
   ]
 };
 
+// Campos de GeneratedContract que un usuario común NUNCA puede escribir directamente
+// (el estado de pago y las firmas sólo se modifican desde /api/functions).
+const PROTECTED_CONTRACT_FIELDS = [
+  'id', 'created_by_id', 'status', 'payment_method', 'signature_status',
+  'signature_part_a', 'signature_part_b', 'signing_token_a', 'signing_token_b',
+  'created_at', 'updated_at',
+];
+
+// Entidades públicas de sólo lectura
+const PUBLIC_READ = ['ContractTemplate', 'LegalDocument'];
+// Entidades que sólo puede leer/listar un administrador
+const ADMIN_READ_ONLY = ['User', 'WaitlistEmail', 'ContractGenerationError', 'ContractFeedback'];
+// Entidades que sólo puede escribir un administrador
+const ADMIN_WRITE_ONLY = ['User', 'ContractTemplate', 'LegalDocument', 'ContractSignature'];
+// Entidades que cualquier visitante puede crear
+const PUBLIC_CREATE = ['GeneratedContract', 'WaitlistEmail'];
+
+const isAdmin = (req) => req.user?.role === 'admin';
+const isGuestOwner = (createdById) =>
+  !createdById || createdById === 'guest' || String(createdById).startsWith('guest_');
+
+function canAccessContract(req, contract) {
+  if (!contract) return false;
+  if (isAdmin(req)) return true;
+  if (isGuestOwner(contract.created_by_id)) return true;
+  return !!req.user && contract.created_by_id === req.user.id;
+}
+
 function getModel(entityName) {
   const model = MODEL_MAP[entityName];
   if (!model) {
-    throw new Error(`Entidad "${entityName}" no válida`);
+    const err = new Error(`Entidad "${entityName}" no válida`);
+    err.status = 400;
+    throw err;
   }
   return model;
 }
 
-function sanitizePayload(entityName, rawPayload) {
+function sanitizePayload(entityName, rawPayload = {}) {
   const allowed = ALLOWED_FIELDS[entityName];
-  if (!allowed) return rawPayload;
+  if (!allowed) return {};
   const clean = {};
-  for (const key of Object.keys(rawPayload)) {
+  for (const key of Object.keys(rawPayload || {})) {
     if (allowed.includes(key)) {
       clean[key] = rawPayload[key];
     }
@@ -69,131 +99,161 @@ function sanitizePayload(entityName, rawPayload) {
   return clean;
 }
 
+function stripProtectedContractFields(payload) {
+  for (const key of PROTECTED_CONTRACT_FIELDS) delete payload[key];
+  return payload;
+}
+
 function checkAccess(req, entityName, method) {
+  if (!MODEL_MAP[entityName]) return true; // getModel devolverá 400
+  if (isAdmin(req)) return true;
   const user = req.user;
-  const role = user?.role;
-  
-  if (role === 'admin') return true;
 
   if (method === 'GET' || method === 'POST_FILTER') {
-    if (entityName === 'ContractTemplate' || entityName === 'LegalDocument') return true;
+    if (PUBLIC_READ.includes(entityName)) return true;
+    if (ADMIN_READ_ONLY.includes(entityName)) return false;
+    if (entityName === 'GeneratedContract') return true; // filtrado por dueño más abajo
     return !!user;
   }
-  
+
   if (method === 'POST') {
+    if (PUBLIC_CREATE.includes(entityName)) return true;
     if (!user) return false;
-    if (entityName === 'User' || entityName === 'ContractTemplate' || entityName === 'LegalDocument') return false;
-    return true;
+    return !ADMIN_WRITE_ONLY.includes(entityName);
   }
-  
-  if (method === 'PUT' || method === 'DELETE') {
-    if (!user) return false;
-    if (entityName === 'User' || entityName === 'ContractTemplate' || entityName === 'LegalDocument') return false;
-    return true;
+
+  if (method === 'PUT') {
+    if (entityName === 'GeneratedContract') return true; // validado por dueño más abajo
+    return false;
   }
-  
+
+  if (method === 'DELETE') {
+    return entityName === 'GeneratedContract' && !!user;
+  }
+
   return false;
+}
+
+function buildOrderBy(sort) {
+  if (!sort) return undefined;
+  const field = sort.startsWith('-') ? sort.slice(1) : sort;
+  const direction = sort.startsWith('-') ? 'desc' : 'asc';
+  const mappedField = field === 'created_date' ? 'created_at' : field;
+  return { [mappedField]: direction };
+}
+
+function parseTake(limit) {
+  const n = parseInt(limit, 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 500) : undefined;
+}
+
+async function filterSignaturesForUser(req, criteria) {
+  // Un usuario común sólo puede ver las firmas de un contrato propio
+  if (!criteria.contract_id) return null;
+  const contract = await prisma.generatedContract.findUnique({ where: { id: criteria.contract_id } });
+  if (!canAccessContract(req, contract)) return null;
+  return { contract_id: criteria.contract_id };
 }
 
 // List
 router.get('/:entity', async (req, res) => {
   try {
-    if (!checkAccess(req, req.params.entity, 'GET')) {
+    const entityName = req.params.entity;
+    if (!checkAccess(req, entityName, 'GET')) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
-    const model = getModel(req.params.entity);
-    const { sort, limit } = req.query;
-
-    let orderBy = undefined;
-    if (sort) {
-      const field = sort.startsWith('-') ? sort.slice(1) : sort;
-      const direction = sort.startsWith('-') ? 'desc' : 'asc';
-      const mappedField = field === 'created_date' ? 'created_at' : field;
-      orderBy = { [mappedField]: direction };
-    }
-
-    const take = limit ? parseInt(limit, 10) : undefined;
+    const model = getModel(entityName);
     const where = {};
-    if (req.params.entity === 'GeneratedContract' && req.user?.role !== 'admin') {
+
+    if (entityName === 'GeneratedContract' && !isAdmin(req)) {
+      if (!req.user) return res.json([]);
       where.created_by_id = req.user.id;
     }
-    const items = await model.findMany({ where, orderBy, take });
+    if (entityName === 'ContractSignature' && !isAdmin(req)) {
+      return res.status(403).json({ error: 'Acceso denegado' });
+    }
+
+    const items = await model.findMany({ where, orderBy: buildOrderBy(req.query.sort), take: parseTake(req.query.limit) });
     res.json(items);
   } catch (error) {
     console.error(`Error list ${req.params.entity}:`, error);
-    res.status(500).json({ error: error.message });
+    res.status(error.status || 500).json({ error: error.message });
   }
 });
 
-// Filter (via POST or GET query)
+// Filter
 router.post('/:entity/filter', async (req, res) => {
   try {
-    if (!checkAccess(req, req.params.entity, 'POST_FILTER')) {
+    const entityName = req.params.entity;
+    if (!checkAccess(req, entityName, 'POST_FILTER')) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
-    const model = getModel(req.params.entity);
-    const { criteria = {}, sort, limit } = req.body;
+    const model = getModel(entityName);
+    const { criteria = {}, sort, limit } = req.body || {};
+    let where = sanitizePayload(entityName, criteria);
 
-    let orderBy = undefined;
-    if (sort) {
-      const field = sort.startsWith('-') ? sort.slice(1) : sort;
-      const direction = sort.startsWith('-') ? 'desc' : 'asc';
-      const mappedField = field === 'created_date' ? 'created_at' : field;
-      orderBy = { [mappedField]: direction };
+    if (entityName === 'GeneratedContract' && !isAdmin(req)) {
+      // Búsqueda puntual por ID: se permite si es del usuario o es un contrato de invitado
+      if (where.id) {
+        const item = await model.findUnique({ where: { id: where.id } });
+        return res.json(canAccessContract(req, item) ? [item] : []);
+      }
+      if (!req.user) return res.json([]);
+      where.created_by_id = req.user.id;
     }
 
-    const take = limit ? parseInt(limit, 10) : undefined;
-    const cleanCriteria = sanitizePayload(req.params.entity, criteria);
-    if (req.params.entity === 'GeneratedContract' && req.user && req.user.role !== 'admin') {
-      cleanCriteria.created_by_id = req.user.id;
+    if (entityName === 'ContractSignature' && !isAdmin(req)) {
+      where = await filterSignaturesForUser(req, where);
+      if (!where) return res.json([]);
     }
-    const items = await model.findMany({ where: cleanCriteria, orderBy, take });
+
+    const items = await model.findMany({ where, orderBy: buildOrderBy(sort), take: parseTake(limit) });
     res.json(items);
   } catch (error) {
     console.error(`Error filter ${req.params.entity}:`, error);
-    res.status(500).json({ error: error.message });
+    res.status(error.status || 500).json({ error: error.message });
   }
 });
 
 // Get single
 router.get('/:entity/:id', async (req, res) => {
   try {
-    if (!checkAccess(req, req.params.entity, 'GET')) {
+    const entityName = req.params.entity;
+    if (!checkAccess(req, entityName, 'GET')) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
-    const model = getModel(req.params.entity);
+    const model = getModel(entityName);
     const item = await model.findUnique({ where: { id: req.params.id } });
     if (!item) {
       return res.status(404).json({ error: 'Item no encontrado' });
     }
-    if (req.params.entity === 'GeneratedContract' && req.user?.role !== 'admin' && item.created_by_id !== req.user.id) {
+    if (entityName === 'GeneratedContract' && !canAccessContract(req, item)) {
       return res.status(403).json({ error: 'Acceso denegado' });
+    }
+    if (entityName === 'ContractSignature' && !isAdmin(req)) {
+      const contract = await prisma.generatedContract.findUnique({ where: { id: item.contract_id } });
+      if (!canAccessContract(req, contract)) return res.status(403).json({ error: 'Acceso denegado' });
     }
     res.json(item);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(error.status || 500).json({ error: error.message });
   }
 });
 
 // Create
 router.post('/:entity', async (req, res) => {
   try {
-    if (!checkAccess(req, req.params.entity, 'POST')) {
+    const entityName = req.params.entity;
+    if (!checkAccess(req, entityName, 'POST')) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
-    const entityName = req.params.entity;
     const model = getModel(entityName);
-    const rawPayload = { ...req.body };
-    const payload = sanitizePayload(entityName, rawPayload);
+    const payload = sanitizePayload(entityName, req.body);
 
     if (entityName === 'GeneratedContract') {
-      payload.created_by_id = req.user.id;
-      if (!payload.status) {
-        payload.status = 'pending_payment';
-      }
-      if (!payload.form_data) {
-        payload.form_data = {};
-      }
+      if (!isAdmin(req)) stripProtectedContractFields(payload);
+      payload.created_by_id = req.user ? req.user.id : `guest_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      if (!payload.status) payload.status = 'pending_payment';
       if (typeof payload.form_data === 'string') {
         try {
           payload.form_data = JSON.parse(payload.form_data);
@@ -201,33 +261,39 @@ router.post('/:entity', async (req, res) => {
           payload.form_data = {};
         }
       }
+      if (!payload.form_data) payload.form_data = {};
+    } else if (!isAdmin(req)) {
+      delete payload.id;
+      if (entityName === 'ContractFeedback' && req.user) payload.user_id = req.user.id;
     }
 
     const created = await model.create({ data: payload });
     res.json(created);
   } catch (error) {
     console.error(`Error al crear entidad ${req.params.entity}:`, error);
-    res.status(500).json({ error: error.message || 'Error al guardar en la base de datos' });
+    res.status(error.status || 500).json({ error: error.message || 'Error al guardar en la base de datos' });
   }
 });
 
 // Update
 router.put('/:entity/:id', async (req, res) => {
   try {
-    if (!checkAccess(req, req.params.entity, 'PUT')) {
+    const entityName = req.params.entity;
+    if (!checkAccess(req, entityName, 'PUT')) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
-    const entityName = req.params.entity;
     const model = getModel(entityName);
-    
-    if (entityName === 'GeneratedContract' && req.user?.role !== 'admin') {
+    const payload = sanitizePayload(entityName, req.body);
+
+    if (entityName === 'GeneratedContract' && !isAdmin(req)) {
       const existing = await model.findUnique({ where: { id: req.params.id } });
-      if (!existing || existing.created_by_id !== req.user.id) {
+      if (!existing) return res.status(404).json({ error: 'Item no encontrado' });
+      if (!canAccessContract(req, existing)) {
         return res.status(403).json({ error: 'Acceso denegado' });
       }
+      stripProtectedContractFields(payload);
     }
-
-    const payload = sanitizePayload(entityName, req.body);
+    delete payload.id;
 
     const updated = await model.update({
       where: { id: req.params.id },
@@ -236,19 +302,20 @@ router.put('/:entity/:id', async (req, res) => {
     res.json(updated);
   } catch (error) {
     console.error(`Error update ${req.params.entity}:`, error);
-    res.status(500).json({ error: error.message });
+    res.status(error.status || 500).json({ error: error.message });
   }
 });
 
 // Delete
 router.delete('/:entity/:id', async (req, res) => {
   try {
-    if (!checkAccess(req, req.params.entity, 'DELETE')) {
+    const entityName = req.params.entity;
+    if (!checkAccess(req, entityName, 'DELETE')) {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
-    const model = getModel(req.params.entity);
+    const model = getModel(entityName);
 
-    if (req.params.entity === 'GeneratedContract' && req.user?.role !== 'admin') {
+    if (entityName === 'GeneratedContract' && !isAdmin(req)) {
       const existing = await model.findUnique({ where: { id: req.params.id } });
       if (!existing || existing.created_by_id !== req.user.id) {
         return res.status(403).json({ error: 'Acceso denegado' });
@@ -257,7 +324,7 @@ router.delete('/:entity/:id', async (req, res) => {
     await model.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(error.status || 500).json({ error: error.message });
   }
 });
 

@@ -58,12 +58,33 @@ router.get('/me', (req, res) => {
   res.json(safeUser);
 });
 
+// Sólo se pueden "reclamar" contratos creados como invitado (nunca los de otro usuario)
+async function claimGuestContract(contractId, userId) {
+  if (!contractId || typeof contractId !== 'string') return;
+  try {
+    const contract = await prisma.generatedContract.findUnique({ where: { id: contractId } });
+    const owner = contract?.created_by_id;
+    const isGuest = contract && (!owner || owner === 'guest' || String(owner).startsWith('guest_'));
+    if (isGuest) {
+      await prisma.generatedContract.update({
+        where: { id: contractId },
+        data: { created_by_id: userId },
+      });
+    }
+  } catch (_) {
+    // no bloquear el login por un fallo al reclamar
+  }
+}
+
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, claimContractId } = req.body;
     const role = 'user';
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
+    }
+    if (String(password).length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     }
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
     if (existing) {
@@ -78,6 +99,9 @@ router.post('/register', async (req, res) => {
         role,
       },
     });
+
+    await claimGuestContract(claimContractId, user.id);
+
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
     const { password: _, ...safeUser } = user;
     res.json({ user: safeUser, token });
@@ -88,7 +112,7 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, claimContractId } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
     }
@@ -100,6 +124,9 @@ router.post('/login', async (req, res) => {
     if (!valid) {
       return res.status(400).json({ error: 'Credenciales inválidas' });
     }
+
+    await claimGuestContract(claimContractId, user.id);
+
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
     const { password: _, ...safeUser } = user;
     res.json({ user: safeUser, token });

@@ -79,20 +79,20 @@ export const base44 = {
         return null;
       }
     },
-    login: async (email, password) => {
+    login: async (email, password, claimContractId) => {
       const data = await request('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, claimContractId }),
       });
       if (data.token) {
         localStorage.setItem('base44_token', data.token);
       }
       return data.user;
     },
-    register: async (email, password, name) => {
+    register: async (email, password, name, claimContractId) => {
       const data = await request('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name, claimContractId }),
       });
       if (data.token) {
         localStorage.setItem('base44_token', data.token);

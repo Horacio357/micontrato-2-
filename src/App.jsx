@@ -59,8 +59,8 @@ const AuthenticatedApp = () => {
         <Route path="/crear" element={<SelectCategory />} />
         <Route path="/crear/:categoria" element={<SelectContract />} />
         <Route path="/crear/:categoria/:contrato" element={<SelectProvince />} />
-        <Route path="/generar/:contrato/:provincia" element={<RequireAuth><Wizard /></RequireAuth>} />
-        <Route path="/preview/:contractId" element={<RequireAuth><Preview /></RequireAuth>} />
+        <Route path="/generar/:contrato/:provincia" element={<Wizard />} />
+        <Route path="/preview/:contractId" element={<Preview />} />
         <Route path="/checkout/success/:contractId" element={<RequireAuth><CheckoutSuccess /></RequireAuth>} />
         <Route path="/mi-cuenta" element={<RequireAuth><MyAccount /></RequireAuth>} />
         <Route path="/mis-contratos" element={<RequireAuth><MisContratos /></RequireAuth>} />

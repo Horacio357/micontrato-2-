@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   FileText, FileDown, Mail, Plus, User, ArrowLeft,
-  PenLine, Shield, CheckCircle2, Clock, Loader2, Printer
+  PenLine, Shield, CheckCircle2, Clock, Loader2, Printer, Lock
 } from "lucide-react";
 import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
@@ -17,7 +17,9 @@ import SignatureModal from "@/components/signature/SignatureModal";
 import SignatureCertificate from "@/components/signature/SignatureCertificate";
 import FeedbackForm from "@/components/wizard/FeedbackForm";
 import LiteralContractText from '@/components/wizard/LiteralContractText';
+import ContractAccessModal from "@/components/wizard/ContractAccessModal";
 import useDocxDownload from "@/components/account/useDocxDownload";
+import { useAuth } from "@/lib/AuthContext";
 import { parseContractText } from "@/lib/contractParser";
 
 const sigStatusMap = {
@@ -31,7 +33,10 @@ const sigStatusMap = {
 export default function ContractDownload() {
   const { contractId } = useParams();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [showSignModal, setShowSignModal] = useState(false);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
 
   const [generatedText, setGeneratedText] = useState("");
   const [documentBlocks, setDocumentBlocks] = useState([]);
@@ -102,6 +107,37 @@ export default function ContractDownload() {
   const [showFeedback, setShowFeedback] = useState(false);
   const contractForDocx = contract ? { ...contract, generated_text: generatedText || contract.generated_text } : null;
   const { downloading: downloadingDocx, download: handleDownloadDocx } = useDocxDownload(contractId, () => setShowFeedback(true), contractForDocx);
+
+  const hasActiveSubscription = user?.subscription_status === 'active';
+  const isContractPaid = contract?.status === 'paid' || contract?.status === 'downloaded' || contract?.status === 'signed';
+  const hasAccess = hasActiveSubscription || isContractPaid;
+
+  const handleAction = (actionType) => {
+    if (!hasAccess) {
+      setPendingAction(actionType);
+      setAccessModalOpen(true);
+      return;
+    }
+
+    if (actionType === 'pdf') {
+      window.print();
+    } else if (actionType === 'word') {
+      handleDownloadDocx();
+    } else if (actionType === 'sign') {
+      setShowSignModal(true);
+    }
+  };
+
+  const handleActionComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ["contract-download", contractId] });
+    queryClient.invalidateQueries({ queryKey: ["my-contracts"] });
+    queryClient.invalidateQueries({ queryKey: ["me"] });
+
+    if (pendingAction === 'pdf') setTimeout(() => window.print(), 350);
+    if (pendingAction === 'word') setTimeout(() => handleDownloadDocx(), 350);
+    if (pendingAction === 'sign') setTimeout(() => setShowSignModal(true), 350);
+    setPendingAction(null);
+  };
 
   const [sendingEmail, setSendingEmail] = useState(false);
 
@@ -184,6 +220,33 @@ export default function ContractDownload() {
           )}
         </motion.div>
 
+        {/* Unpaid / No Membership Warning Banner */}
+        {!hasAccess && (
+          <div className="max-w-3xl mx-auto mb-8 p-4 bg-amber-50/90 border border-amber-200/90 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5 text-amber-700" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-amber-900">Documento pendiente de activación</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Adquirí este documento único ($4.990) o activá tu membresía profesional para descargar Word/PDF y firmar.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                setPendingAction('word');
+                setAccessModalOpen(true);
+              }}
+              className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0 font-semibold text-xs sm:text-sm"
+            >
+              Desbloquear Descarga
+            </Button>
+          </div>
+        )}
+
         {/* Actions: Download + Sign */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -193,7 +256,7 @@ export default function ContractDownload() {
         >
           <Card
             className="p-5 text-center cursor-pointer hover:shadow-lg hover:border-accent/30 transition-all group"
-            onClick={() => window.print()}
+            onClick={() => handleAction('pdf')}
           >
             <Printer className="w-7 h-7 text-accent mx-auto mb-2 group-hover:scale-110 transition-transform" />
             <p className="font-semibold text-foreground text-sm">Imprimir / PDF</p>
@@ -202,7 +265,7 @@ export default function ContractDownload() {
 
           <Card
             className={`p-5 text-center cursor-pointer hover:shadow-lg hover:border-accent/30 transition-all group ${downloadingDocx ? "opacity-60 pointer-events-none" : ""}`}
-            onClick={handleDownloadDocx}
+            onClick={() => handleAction('word')}
           >
             {downloadingDocx
               ? <Loader2 className="w-7 h-7 text-blue-500 mx-auto mb-2 animate-spin" />
@@ -225,7 +288,7 @@ export default function ContractDownload() {
           {(canSignA || canSignB) && (
             <Card
               className="p-5 text-center cursor-pointer hover:shadow-lg hover:border-emerald-300 border-emerald-100 bg-emerald-50/40 transition-all group"
-              onClick={() => setShowSignModal(true)}
+              onClick={() => handleAction('sign')}
             >
               <PenLine className="w-7 h-7 text-emerald-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
               <p className="font-semibold text-emerald-800 text-sm">Firmar digitalmente</p>
@@ -336,6 +399,15 @@ export default function ContractDownload() {
           onSigned={handleSigned}
         />
       )}
+
+      {/* Access & Payment Interceptor Modal */}
+      <ContractAccessModal
+        isOpen={accessModalOpen}
+        onClose={() => setAccessModalOpen(false)}
+        contract={contract}
+        pendingAction={pendingAction}
+        onActionComplete={handleActionComplete}
+      />
     </div>
   );
 }

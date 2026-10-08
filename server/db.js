@@ -18,6 +18,16 @@ function createMemoryStore() {
         updated_at: new Date()
       },
       {
+        id: 'local_user_sin_pago',
+        email: 'sinpago@micontrato.com.ar',
+        password: bcrypt.hashSync('123456', 10),
+        name: 'Usuario Nuevo (Sin Pago)',
+        role: 'user',
+        subscription_status: 'none',
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
         id: 'local_admin_1',
         email: 'admin@micontrato.com.ar',
         password: bcrypt.hashSync('admin123', 10),
@@ -30,7 +40,7 @@ function createMemoryStore() {
     ],
     generatedContract: [
       {
-        id: 'local_demo_1',
+        id: 'demo_contract_1',
         created_by_id: 'local_user_1',
         template_id: 'locacion-inmueble',
         template_name: 'Contrato de Locación de Inmueble Habitacional',
@@ -44,7 +54,7 @@ function createMemoryStore() {
         updated_at: new Date()
       },
       {
-        id: 'local_demo_2',
+        id: 'demo_contract_2',
         created_by_id: 'local_user_1',
         template_id: 'servicios-profesionales',
         template_name: 'Contrato de Prestación de Servicios Profesionales',
@@ -66,13 +76,22 @@ function createMemoryStore() {
     waitlistEmail: []
   };
 
+  const matches = (item, where = {}) =>
+    Object.entries(where).every(([k, v]) => {
+      if (v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date)) {
+        if ('in' in v) return Array.isArray(v.in) && v.in.includes(item[k]);
+        if ('not' in v) return item[k] !== v.not;
+        if ('contains' in v) return String(item[k] ?? '').toLowerCase().includes(String(v.contains).toLowerCase());
+        if ('equals' in v) return item[k] === v.equals;
+      }
+      return item[k] === v;
+    });
+
   const createModelHandler = (modelName) => ({
     findMany: async (args = {}) => {
       let items = [...(store[modelName] || [])];
       if (args.where) {
-        items = items.filter((item) =>
-          Object.entries(args.where).every(([k, v]) => item[k] === v)
-        );
+        items = items.filter((item) => matches(item, args.where));
       }
       if (args.orderBy) {
         const [field, dir] = Object.entries(args.orderBy)[0] || [];
@@ -91,16 +110,14 @@ function createMemoryStore() {
     },
     findUnique: async (args = {}) => {
       const items = store[modelName] || [];
-      return items.find((item) =>
-        Object.entries(args.where || {}).every(([k, v]) => item[k] === v)
-      ) || null;
+      return items.find((item) => matches(item, args.where)) || null;
     },
     create: async ({ data }) => {
       const newItem = {
-        id: data.id || `local_${modelName}_${Date.now()}`,
         created_at: new Date(),
         updated_at: new Date(),
-        ...data
+        ...data,
+        id: data.id || `mem_${modelName}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
       };
       if (!store[modelName]) store[modelName] = [];
       store[modelName].unshift(newItem);
