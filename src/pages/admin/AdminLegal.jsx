@@ -25,7 +25,9 @@ export default function AdminLegal() {
   // Populate contents from DB
   useEffect(() => {
     if (legalDocs.length > 0) {
-      const map = Object.fromEntries(legalDocs.map((d) => [d.key, d.content || ""]));
+      const map = Object.fromEntries(
+        legalDocs.map((d) => [d.document_type || d.key, d.content || ""])
+      );
       setContents((prev) => ({ ...prev, ...map }));
     }
   }, [legalDocs]);
@@ -33,14 +35,18 @@ export default function AdminLegal() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const doc = DOCS.find((d) => d.key === activeDoc);
-      const existing = legalDocs.find((d) => d.key === activeDoc);
+      const existing = legalDocs.find((d) => (d.document_type || d.key) === activeDoc);
       if (existing) {
-        await base44.entities.LegalDocument.update(existing.id, { content: contents[activeDoc] });
+        await base44.entities.LegalDocument.update(existing.id, {
+          title: doc.title,
+          document_type: activeDoc,
+          content: contents[activeDoc] || "",
+        });
       } else {
         await base44.entities.LegalDocument.create({
-          key: activeDoc,
+          document_type: activeDoc,
           title: doc.title,
-          content: contents[activeDoc],
+          content: contents[activeDoc] || "",
         });
       }
     },

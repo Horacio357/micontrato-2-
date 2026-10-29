@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 const router = Router();
 
-const SYSTEM_PROMPT = `Sos un asistente virtual experto en legislación y contratos de la República Argentina para la plataforma micontrato.com.ar.
+const SYSTEM_PROMPT = `Sos un asistente virtual experto en legislación y contratos de la República Argentina para la plataforma micontratos.com.
 
 Tus funciones son:
 1. Orientar amablemente a los usuarios sobre qué tipo de contrato necesitan (alquiler de vivienda, comercial, temporario, mutuo oneroso, convenio de confidencialidad, servicios profesionales).
@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
       // Mensaje de respaldo amigable si aún no se ingresó la API Key de Groq en Railway
       return res.json({
         role: 'assistant',
-        content: '¡Hola! 👋 Soy el asistente virtual de micontrato.com.ar. ¿En qué contrato o duda legal puedo ayudarte hoy?',
+        content: '¡Hola! 👋 Soy el asistente virtual de micontratos.com. ¿En qué contrato o duda legal puedo ayudarte hoy?',
       });
     }
 

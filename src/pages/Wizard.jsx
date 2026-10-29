@@ -13,11 +13,13 @@ import GeneratingLoader from "@/components/wizard/GeneratingLoader";
 import { prepareContractPayload, restoreContractFormData } from "@/lib/contractPayload";
 import MissingFieldsWarning from "@/components/wizard/MissingFieldsWarning";
 import { computeMontoTotalCuotas } from "@/lib/contractCalculations";
+import { useDynamicContracts } from "@/hooks/useDynamicContracts";
 
 export default function Wizard() {
   const { contrato, provincia } = useParams();
   const navigate = useNavigate();
-  const contract = CONTRACTS.find((c) => c.slug === contrato);
+  const { contracts: dynamicContracts } = useDynamicContracts();
+  const contract = dynamicContracts.find((c) => c.slug === contrato) || CONTRACTS.find((c) => c.slug === contrato);
   const editId = new URLSearchParams(window.location.search).get("edit");
   const localSteps = getContractSteps(contrato);
   const [steps, setSteps] = useState(localSteps);
@@ -122,17 +124,15 @@ export default function Wizard() {
       const documentBlocks = aiResponse.data?.document_blocks || [];
       if (!generatedText) throw new Error("No se recibió texto del contrato");
 
-      const documentPayload = JSON.stringify({ version: 2, text: generatedText, blocks: documentBlocks.length ? documentBlocks : [{ type: "paragraph", content: generatedText }] });
-      const textBlob = new Blob([documentPayload], { type: "application/json" });
-      const textFile = new File([textBlob], "contract.json", { type: "application/json" });
+      const documentPayload = JSON.stringify({
+        version: 2,
+        text: generatedText,
+        blocks: documentBlocks.length ? documentBlocks : [{ type: "paragraph", content: generatedText }]
+      });
 
-      let file_url = documentPayload;
-      try {
-        const uploadRes = await base44.integrations.Core.UploadFile({ file: textFile });
-        if (uploadRes?.file_url) file_url = uploadRes.file_url;
-      } catch (uploadErr) {
-        console.warn("UploadFile fallback:", uploadErr);
-      }
+      // Tokens de firma únicos y seguros para Parte A y Parte B
+      const tokenA = `sigA_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      const tokenB = `sigB_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
       const contractData = {
         template_id: contract.slug,
@@ -140,7 +140,9 @@ export default function Wizard() {
         category: contract.category,
         province: provincia,
         form_data: sanitizedFormData,
-        generated_text: file_url,
+        generated_text: documentPayload,
+        signing_token_a: tokenA,
+        signing_token_b: tokenB,
       };
       let generated;
       try {

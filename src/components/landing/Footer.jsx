@@ -11,15 +11,17 @@ export default function Footer() {
               <FileText className="w-4 h-4 text-accent-foreground" />
             </div>
             <span className="text-xl font-bold tracking-tight">
-              mi<span className="text-accent">contrato</span>
+              mi<span className="text-accent">contratos</span>
             </span>
           </div>
           <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="flex items-center gap-8 text-sm text-primary-foreground/60">
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-primary-foreground/60">
               <Link to="/crear" className="hover:text-primary-foreground transition-colors">Crear contrato</Link>
-              <a href="#faq" className="hover:text-primary-foreground transition-colors">FAQ</a>
-              <a href="#como-funciona" className="hover:text-primary-foreground transition-colors">Cómo funciona</a>
-              <a href="mailto:Admin@micontratos.com" className="hover:text-primary-foreground transition-colors">Contacto</a>
+              <a href="/#como-funciona" className="hover:text-primary-foreground transition-colors">Cómo funciona</a>
+              <a href="/#faq" className="hover:text-primary-foreground transition-colors">FAQ</a>
+              <Link to="/terminos" className="hover:text-primary-foreground transition-colors">Términos y Condiciones</Link>
+              <Link to="/privacidad" className="hover:text-primary-foreground transition-colors">Privacidad</Link>
+              <a href="mailto:admin@micontratos.com" className="hover:text-primary-foreground transition-colors">admin@micontratos.com</a>
             </div>
             <div className="flex items-center gap-4">
               <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-primary-foreground/60 hover:text-primary-foreground transition-colors">
@@ -35,7 +37,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-10 pt-8 border-t border-primary-foreground/10 text-center text-xs text-primary-foreground/40">
-          © {new Date().getFullYear()} micontrato. Todos los derechos reservados. Argentina.
+          © {new Date().getFullYear()} micontratos.com. Todos los derechos reservados. Argentina.
         </div>
       </div>
     </footer>

@@ -34,9 +34,8 @@ self.addEventListener('fetch', (event) => {
   // Solo interceptamos GET
   if (request.method !== 'GET') return;
 
-  // API calls → Network-first, fallback a cache
+  // API calls y datos sensibles → NUNCA interceptar ni cachear por seguridad y privacidad (Ley 25.326)
   if (url.hostname.includes('base44') || url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request, CACHE_NAME));
     return;
   }
 

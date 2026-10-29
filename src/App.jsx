@@ -28,6 +28,7 @@ import AdminPrecios from './pages/admin/AdminPrecios';
 import AdminPagos from './pages/admin/AdminPagos';
 import AdminLegal from './pages/admin/AdminLegal';
 import AdminPlantillas from './pages/admin/AdminPlantillas';
+import LegalPage from './pages/LegalPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, authError } = useAuth();
@@ -62,6 +63,8 @@ const AuthenticatedApp = () => {
         <Route path="/generar/:contrato/:provincia" element={<Wizard />} />
         <Route path="/preview/:contractId" element={<Preview />} />
         <Route path="/checkout/success/:contractId" element={<RequireAuth><CheckoutSuccess /></RequireAuth>} />
+        <Route path="/terminos" element={<LegalPage type="terminos" />} />
+        <Route path="/privacidad" element={<LegalPage type="privacidad" />} />
         <Route path="/mi-cuenta" element={<RequireAuth><MyAccount /></RequireAuth>} />
         <Route path="/mis-contratos" element={<RequireAuth><MisContratos /></RequireAuth>} />
         <Route path="/mi-cuenta/contrato/:contractId" element={<RequireAuth><ContractDownload /></RequireAuth>} />

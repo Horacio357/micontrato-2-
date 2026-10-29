@@ -11,9 +11,9 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 
 const router = Router();
 
-// Pagos simulados (QA): sólo fuera de producción, o si se habilitan explícitamente
+// Pagos simulados (QA): activos por defecto para evaluación hasta integrar Stripe en producción
 const QA_PAYMENTS_ENABLED =
-  process.env.NODE_ENV !== 'production' || process.env.ENABLE_QA_PAYMENTS === 'true';
+  process.env.NODE_ENV !== 'production' || process.env.ENABLE_QA_PAYMENTS !== 'false';
 
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
@@ -22,9 +22,10 @@ const isGuestOwner = (createdById) =>
   !createdById || createdById === 'guest' || String(createdById).startsWith('guest_');
 const isBrowserOnlyId = (id) => typeof id === 'string' && id.startsWith('local_');
 
-function canAccessContract(user, contract) {
+function canAccessContract(user, contract, token = null) {
   if (!contract) return false;
   if (isAdmin(user)) return true;
+  if (token && (contract.signing_token_a === token || contract.signing_token_b === token)) return true;
   if (isGuestOwner(contract.created_by_id)) return true;
   return !!user && contract.created_by_id === user.id;
 }
@@ -238,10 +239,22 @@ router.post('/createContractSignature', async (req, res) => {
 
     const contract = await prisma.generatedContract.findUnique({ where: { id: contract_id } });
     if (!contract) return res.status(404).json({ error: 'Contrato no encontrado' });
-    if (!isOwnerOrAdmin(user, contract)) {
-      return res.status(403).json({ error: 'No tenés acceso a este contrato' });
+    const tokenMatches =
+      signing_token &&
+      ((contract.signing_token_a && contract.signing_token_a === signing_token) ||
+       (contract.signing_token_b && contract.signing_token_b === signing_token));
+
+    const isPartyBSigning =
+      party_role === 'part_b' &&
+      !contract.signature_part_b?.signed_at &&
+      (contract.signature_part_a?.signed_at || isContractPaid(contract));
+
+    const canSign = isOwnerOrAdmin(user, contract) || tokenMatches || isPartyBSigning;
+    if (!canSign) {
+      return res.status(403).json({ error: 'No tenés permisos para firmar este contrato' });
     }
-    if (!isAdmin(user) && !isContractPaid(contract) && !hasActiveSubscription(user)) {
+
+    if (!isAdmin(user) && !tokenMatches && !isPartyBSigning && !isContractPaid(contract) && !hasActiveSubscription(user)) {
       return res.status(402).json({ error: 'Este contrato requiere pago o una membresía activa para firmarse' });
     }
     const sigFieldKey = party_role === 'part_a' ? 'signature_part_a' : 'signature_part_b';
@@ -318,18 +331,18 @@ router.post('/sendContractEmail', async (req, res) => {
     }
 
     const recipientEmail = user.email;
-    const frontendUrl = process.env.FRONTEND_URL || 'https://micontrato.com.ar';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://micontratos.com';
 
     if (resend) {
       await resend.emails.send({
-        from: 'MiContrato <hola@micontrato.com.ar>',
+        from: 'miContratos <hola@micontratos.com>',
         to: [recipientEmail],
         subject: `Tu contrato: ${contractTitle}`,
         html: `
           <h1>¡Hola!</h1>
           <p>Tu contrato <strong>${escapeHtml(contractTitle)}</strong> se ha generado exitosamente y está listo para descargar o firmar.</p>
           <p><a href="${frontendUrl}/mi-cuenta/contrato/${encodeURIComponent(contractId)}">Ver contrato</a></p>
-          <p>Gracias por usar MiContrato.</p>
+          <p>Gracias por usar miContratos.</p>
         `,
       });
     } else {

@@ -2,6 +2,75 @@ import { PrismaClient } from '@prisma/client';
 import { exec } from 'node:child_process';
 import bcrypt from 'bcryptjs';
 
+export const INITIAL_TEMPLATES = [
+  {
+    name: "Locación de Inmueble (Vivienda)",
+    slug: "locacion-vivienda",
+    category: "inmobiliario",
+    price: 4990,
+    description: "Contrato de locación con destino habitacional conforme DNU 70/2023 y Código Civil y Comercial.",
+    is_active: true,
+  },
+  {
+    name: "Locación Comercial",
+    slug: "locacion-comercial",
+    category: "inmobiliario",
+    price: 5990,
+    description: "Alquiler de local u oficina para actividad comercial o profesional.",
+    is_active: true,
+  },
+  {
+    name: "Locación Temporaria Turística",
+    slug: "locacion-temporaria-turistica",
+    category: "inmobiliario",
+    price: 5990,
+    description: "Alquiler temporario con fines turísticos o de descanso por días o semanas.",
+    is_active: true,
+  },
+  {
+    name: "Locación de Servicios Profesionales",
+    slug: "locacion-servicios-profesionales",
+    category: "laboral",
+    price: 4990,
+    description: "Prestación de servicios profesionales independientes sin relación de dependencia.",
+    is_active: true,
+  },
+  {
+    name: "Convenio de Confidencialidad (NDA)",
+    slug: "convenio-confidencialidad",
+    category: "laboral",
+    price: 4990,
+    description: "Protección mutua o unilateral de información técnica, comercial y confidencial.",
+    is_active: true,
+  },
+  {
+    name: "Contrato de Mutuo Oneroso",
+    slug: "mutuo-oneroso",
+    category: "civil",
+    price: 4990,
+    description: "Préstamo de dinero en pesos o dólares con intereses compensatorios y punitorios.",
+    is_active: true,
+  },
+];
+
+export const INITIAL_LEGAL_DOCS = [
+  {
+    document_type: "tos",
+    title: "Términos y Condiciones de Uso",
+    content: "Términos y condiciones de uso de micontratos.com de acuerdo a la legislación vigente de la República Argentina y normas de contratación electrónica del Código Civil y Comercial de la Nación.",
+  },
+  {
+    document_type: "privacy",
+    title: "Política de Privacidad y Protección de Datos",
+    content: "Política de privacidad de micontratos.com conforme a la Ley N° 25.326 de Protección de los Datos Personales de la República Argentina.",
+  },
+  {
+    document_type: "disclaimer",
+    title: "Aviso Legal",
+    content: "Aviso legal y delimitación de responsabilidad de micontratos.com para instrumentos y modelos jurídicos emitidos.",
+  },
+];
+
 const isLocalMode = !process.env.DATABASE_URL;
 
 function createMemoryStore() {
@@ -32,6 +101,16 @@ function createMemoryStore() {
         email: 'admin@micontrato.com.ar',
         password: bcrypt.hashSync('admin123', 10),
         name: 'Administrador Demo',
+        role: 'admin',
+        subscription_status: 'active',
+        created_at: new Date(),
+        updated_at: new Date()
+      },
+      {
+        id: 'local_superadmin_micontratos',
+        email: 'admin@micontratos.com',
+        password: bcrypt.hashSync('admin123', 10),
+        name: 'Super Administrador miContratos',
         role: 'admin',
         subscription_status: 'active',
         created_at: new Date(),
@@ -68,11 +147,21 @@ function createMemoryStore() {
         updated_at: new Date()
       }
     ],
-    contractTemplate: [],
+    contractTemplate: INITIAL_TEMPLATES.map((t, i) => ({
+      id: `tmpl_${i + 1}`,
+      ...t,
+      created_at: new Date(),
+      updated_at: new Date()
+    })),
     contractSignature: [],
     contractFeedback: [],
     contractGenerationError: [],
-    legalDocument: [],
+    legalDocument: INITIAL_LEGAL_DOCS.map((doc, i) => ({
+      id: `doc_${i + 1}`,
+      ...doc,
+      created_at: new Date(),
+      updated_at: new Date()
+    })),
     waitlistEmail: []
   };
 
@@ -154,17 +243,50 @@ function createMemoryStore() {
 
 export const prisma = isLocalMode ? createMemoryStore() : new PrismaClient();
 
-export function initDb() {
+export async function initDb() {
   if (process.env.DATABASE_URL) {
-    exec('npx prisma db push --skip-generate', (err, stdout, stderr) => {
-      if (err) {
-        console.error('Error al sincronizar tablas PostgreSQL:', stderr || err.message);
-      } else {
-        console.log('Tablas PostgreSQL creadas/sincronizadas correctamente.');
+    try {
+      // 1. Seed super admin inicial si no existe
+      const adminEmail = 'admin@micontratos.com';
+      const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+      if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash('admin123', 10);
+        await prisma.user.create({
+          data: {
+            email: adminEmail,
+            name: 'Super Administrador miContratos',
+            password: hashedPassword,
+            role: 'admin',
+            subscription_status: 'active',
+          },
+        });
+        console.log(`✅ Super Administrador inicial creado: ${adminEmail}`);
       }
-    });
+
+      // 2. Seed de plantillas base si la tabla está vacía
+      const currentTemplates = await prisma.contractTemplate.findMany({ take: 1 });
+      if (currentTemplates.length === 0) {
+        for (const t of INITIAL_TEMPLATES) {
+          await prisma.contractTemplate.create({ data: t });
+        }
+        console.log(`✅ ${INITIAL_TEMPLATES.length} plantillas base registradas en PostgreSQL.`);
+      }
+
+      // 3. Seed de documentos legales base si la tabla está vacía
+      const currentDocs = await prisma.legalDocument.findMany({ take: 1 });
+      if (currentDocs.length === 0) {
+        for (const d of INITIAL_LEGAL_DOCS) {
+          await prisma.legalDocument.create({ data: d });
+        }
+        console.log(`✅ ${INITIAL_LEGAL_DOCS.length} documentos legales base registrados en PostgreSQL.`);
+      }
+      console.log('✅ Base de datos PostgreSQL conectada y sincronizada.');
+    } catch (err) {
+      console.error('Aviso al verificar datos iniciales en PostgreSQL:', err.message);
+    }
   } else {
     console.log('🚀 MODO LOCAL ACTIVADO: Almacenamiento en memoria listo.');
+    console.log('   Super Admin demo: admin@micontratos.com / admin123');
     console.log('   Usuario demo: demo@micontrato.com.ar / 123456');
   }
 }

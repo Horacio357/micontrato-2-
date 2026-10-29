@@ -17,16 +17,16 @@ export default function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="#como-funciona" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="/#como-funciona" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Cómo funciona
             </a>
-            <a href="#contratos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="/#contratos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Contratos
             </a>
-            <a href="#precios" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="/#precios" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Precios
             </a>
-            <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="/#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               FAQ
             </a>
           </div>
@@ -58,10 +58,10 @@ export default function Navbar() {
             className="md:hidden border-t border-border bg-background"
           >
             <div className="px-4 py-4 space-y-3">
-              <a href="#como-funciona" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Cómo funciona</a>
-              <a href="#contratos" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Contratos</a>
-              <a href="#precios" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Precios</a>
-              <a href="#faq" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>FAQ</a>
+              <a href="/#como-funciona" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Cómo funciona</a>
+              <a href="/#contratos" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Contratos</a>
+              <a href="/#precios" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Precios</a>
+              <a href="/#faq" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>FAQ</a>
               <div className="pt-3 border-t border-border space-y-2">
                 <Link to="/mi-cuenta" onClick={() => setOpen(false)}><Button variant="ghost" size="sm" className="w-full">Mi cuenta</Button></Link>
                 <Link to="/mis-contratos" onClick={() => setOpen(false)}>

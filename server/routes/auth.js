@@ -4,9 +4,25 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../db.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error('FATAL ERROR: JWT_SECRET environment variable is required');
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  (process.env.NODE_ENV !== 'production'
+    ? 'micontratos-dev-secret-key-2026'
+    : 'micontratos-provisional-secret-key-railway');
+
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️ AVISO: Variable JWT_SECRET no definida. Se utiliza clave provisional de respaldo.');
+}
+
+export function isSuperAdminEmail(email = '') {
+  if (!email || typeof email !== 'string') return false;
+  const normalized = email.toLowerCase().trim();
+  const configuredAdmins = (process.env.SUPER_ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const defaultAdmins = ['admin@micontratos.com', 'admin@micontrato.com.ar'];
+  return configuredAdmins.includes(normalized) || defaultAdmins.includes(normalized);
 }
 
 export function authenticateToken(req, res, next) {
@@ -79,23 +95,24 @@ async function claimGuestContract(contractId, userId) {
 router.post('/register', async (req, res) => {
   try {
     const { email, password, name, claimContractId } = req.body;
-    const role = 'user';
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
     }
     if (String(password).length < 6) {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     }
-    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return res.status(400).json({ error: 'El email ya está registrado' });
     }
+    const role = isSuperAdminEmail(normalizedEmail) ? 'admin' : 'user';
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         password: hashedPassword,
-        name: name || email.split('@')[0],
+        name: name || normalizedEmail.split('@')[0],
         role,
       },
     });
@@ -116,13 +133,22 @@ router.post('/login', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
     }
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+    const normalizedEmail = email.toLowerCase().trim();
+    let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
       return res.status(400).json({ error: 'Credenciales inválidas' });
     }
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return res.status(400).json({ error: 'Credenciales inválidas' });
+    }
+
+    // Auto-promover a admin si su email está en la lista de super administradores
+    if (user.role !== 'admin' && isSuperAdminEmail(normalizedEmail)) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'admin' },
+      });
     }
 
     await claimGuestContract(claimContractId, user.id);

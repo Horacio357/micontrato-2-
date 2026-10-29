@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
@@ -21,11 +21,17 @@ export default function AdminPrecios() {
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["admin-templates-precios"],
     queryFn: () => base44.entities.ContractTemplate.list("name", 200),
-    onSuccess: (data) => {
-      const initial = Object.fromEntries(data.map((t) => [t.id, t.price ?? ""]));
-      setPrices(initial);
-    },
   });
+
+  useEffect(() => {
+    if (Array.isArray(templates) && templates.length > 0) {
+      setPrices((prev) => {
+        const initial = Object.fromEntries(templates.map((t) => [t.id, t.price ?? ""]));
+        // Solo sobrescribe si no se estaba editando ya
+        return Object.keys(prev).length === 0 ? initial : { ...initial, ...prev };
+      });
+    }
+  }, [templates]);
 
   // Group by category
   const byCategory = templates.reduce((acc, t) => {

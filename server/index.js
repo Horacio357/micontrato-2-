@@ -15,16 +15,23 @@ const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://micontratos.com',
+  'https://www.micontratos.com',
+  'https://micontrato.com.ar',
+  'https://www.micontrato.com.ar',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'https://micontrato.com.ar',
-  'https://www.micontrato.com.ar'
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Permitir subdominios de Railway automáticamente
+    if (/\.railway\.app$/.test(new URL(origin).hostname)) {
+      return callback(null, true);
+    }
+    // Entorno de desarrollo local
     if (process.env.NODE_ENV !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
       return callback(null, true);
     }
@@ -55,16 +62,31 @@ app.use('/uploads', express.static(uploadsPath));
 const distPath = path.join(process.cwd(), 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(distPath, 'index.html'));
+  app.get('*', (req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      return res.sendFile(path.join(distPath, 'index.html'));
     }
+    next();
   });
 }
 
+// 404 Handler para rutas no encontradas
+app.use((req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada', path: req.originalUrl });
+});
+
+// Middleware global de captura de errores
+app.use((err, req, res, next) => {
+  console.error('Error no controlado en Express:', err);
+  const status = err.status || (err.name === 'SyntaxError' ? 400 : 500);
+  res.status(status).json({ error: err.message || 'Error interno del servidor' });
+});
+
 import { initDb } from './db.js';
 
-app.listen(PORT, () => {
-  console.log(`Servidor miContrato corriendo en el puerto ${PORT}`);
-  initDb();
+app.listen(PORT, async () => {
+  console.log(`Servidor miContratos corriendo en el puerto ${PORT}`);
+  await initDb();
 });
+
+export default app;

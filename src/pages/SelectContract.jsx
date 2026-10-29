@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CONTRACTS, CATEGORIES } from "@/lib/contractsData";
+import { CATEGORIES } from "@/lib/contractsData";
+import { useDynamicContracts } from "@/hooks/useDynamicContracts";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,9 @@ import Navbar from "@/components/landing/Navbar";
 
 export default function SelectContract() {
   const { categoria } = useParams();
+  const { contracts: dynamicContracts } = useDynamicContracts();
   const category = CATEGORIES.find((c) => c.id === categoria);
-  const contracts = CONTRACTS.filter((c) => c.category === categoria);
+  const contracts = dynamicContracts.filter((c) => c.category === categoria);
 
   if (!category) {
     return (

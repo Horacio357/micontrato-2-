@@ -144,7 +144,7 @@ export const base44 = {
       return {
         id: 'conv-' + Date.now(),
         messages: [
-          { role: 'assistant', content: '¡Hola! 👋 Soy el asistente virtual de micontrato.com.ar. ¿En qué puedo ayudarte hoy?' },
+          { role: 'assistant', content: '¡Hola! 👋 Soy el asistente virtual de micontratos.com. ¿En qué puedo ayudarte hoy?' },
         ],
       };
     },
@@ -152,10 +152,13 @@ export const base44 = {
       if (!conversation) return;
       if (!conversation.messages) conversation.messages = [];
 
+      // Registrar inmediatamente el mensaje del usuario en el historial de la conversación
+      conversation.messages.push({ role, content });
+
       try {
         const reply = await request('/chat', {
           method: 'POST',
-          body: JSON.stringify({ messages: [...conversation.messages, { role, content }] }),
+          body: JSON.stringify({ messages: conversation.messages }),
         });
         if (reply?.content) {
           conversation.messages.push({ role: 'assistant', content: reply.content });

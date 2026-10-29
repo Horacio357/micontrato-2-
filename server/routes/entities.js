@@ -73,6 +73,8 @@ const isGuestOwner = (createdById) =>
 function canAccessContract(req, contract) {
   if (!contract) return false;
   if (isAdmin(req)) return true;
+  const token = req.query?.token || req.headers?.['x-signing-token'];
+  if (token && (contract.signing_token_a === token || contract.signing_token_b === token)) return true;
   if (isGuestOwner(contract.created_by_id)) return true;
   return !!req.user && contract.created_by_id === req.user.id;
 }
@@ -91,6 +93,11 @@ function sanitizePayload(entityName, rawPayload = {}) {
   const allowed = ALLOWED_FIELDS[entityName];
   if (!allowed) return {};
   const clean = {};
+  if (entityName === 'LegalDocument') {
+    if (rawPayload.key && !rawPayload.document_type) {
+      rawPayload.document_type = rawPayload.key;
+    }
+  }
   for (const key of Object.keys(rawPayload || {})) {
     if (allowed.includes(key)) {
       clean[key] = rawPayload[key];
@@ -102,6 +109,22 @@ function sanitizePayload(entityName, rawPayload = {}) {
 function stripProtectedContractFields(payload) {
   for (const key of PROTECTED_CONTRACT_FIELDS) delete payload[key];
   return payload;
+}
+
+function formatEntityOutput(entityName, item) {
+  if (!item) return item;
+  if (entityName === 'User') {
+    const { password: _, ...safeUser } = item;
+    return safeUser;
+  }
+  if (entityName === 'LegalDocument') {
+    return {
+      ...item,
+      key: item.document_type || item.key,
+      document_type: item.document_type || item.key,
+    };
+  }
+  return item;
 }
 
 function checkAccess(req, entityName, method) {
@@ -173,7 +196,8 @@ router.get('/:entity', async (req, res) => {
       return res.status(403).json({ error: 'Acceso denegado' });
     }
 
-    const items = await model.findMany({ where, orderBy: buildOrderBy(req.query.sort), take: parseTake(req.query.limit) });
+    let items = await model.findMany({ where, orderBy: buildOrderBy(req.query.sort), take: parseTake(req.query.limit) });
+    items = items.map((it) => formatEntityOutput(entityName, it));
     res.json(items);
   } catch (error) {
     console.error(`Error list ${req.params.entity}:`, error);
@@ -196,7 +220,7 @@ router.post('/:entity/filter', async (req, res) => {
       // Búsqueda puntual por ID: se permite si es del usuario o es un contrato de invitado
       if (where.id) {
         const item = await model.findUnique({ where: { id: where.id } });
-        return res.json(canAccessContract(req, item) ? [item] : []);
+        return res.json(canAccessContract(req, item) ? [formatEntityOutput(entityName, item)] : []);
       }
       if (!req.user) return res.json([]);
       where.created_by_id = req.user.id;
@@ -207,7 +231,8 @@ router.post('/:entity/filter', async (req, res) => {
       if (!where) return res.json([]);
     }
 
-    const items = await model.findMany({ where, orderBy: buildOrderBy(sort), take: parseTake(limit) });
+    let items = await model.findMany({ where, orderBy: buildOrderBy(sort), take: parseTake(limit) });
+    items = items.map((it) => formatEntityOutput(entityName, it));
     res.json(items);
   } catch (error) {
     console.error(`Error filter ${req.params.entity}:`, error);
@@ -234,7 +259,7 @@ router.get('/:entity/:id', async (req, res) => {
       const contract = await prisma.generatedContract.findUnique({ where: { id: item.contract_id } });
       if (!canAccessContract(req, contract)) return res.status(403).json({ error: 'Acceso denegado' });
     }
-    res.json(item);
+    res.json(formatEntityOutput(entityName, item));
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message });
   }

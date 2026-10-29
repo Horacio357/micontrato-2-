@@ -1,13 +1,15 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CONTRACTS, CATEGORIES } from "@/lib/contractsData";
+import { CATEGORIES } from "@/lib/contractsData";
+import { useDynamicContracts } from "@/hooks/useDynamicContracts";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, ArrowRight, Lock } from "lucide-react";
 
-const availableCount = CONTRACTS.filter((c) => c.available).length;
-
 export default function ContractCatalog() {
+  const { contracts } = useDynamicContracts();
+  const availableCount = contracts.filter((c) => c.available).length;
+
   return (
     <section id="contratos" className="py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -28,7 +30,7 @@ export default function ContractCatalog() {
               {cat.name}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {CONTRACTS.filter((c) => c.category === cat.id).map((contract, i) => (
+              {contracts.filter((c) => c.category === cat.id).map((contract, i) => (
                 <motion.div
                   key={contract.slug}
                   initial={{ opacity: 0, y: 20 }}
