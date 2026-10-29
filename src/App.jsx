@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "sonner"
 import OfflineBanner from "@/components/ui/OfflineBanner"
 import InstallPWA from "@/components/ui/InstallPWA"
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -94,6 +95,7 @@ function App() {
           <AuthenticatedApp />
         </Router>
         <Toaster />
+        <SonnerToaster richColors position="top-right" />
         <OfflineBanner />
         <InstallPWA />
       </QueryClientProvider>

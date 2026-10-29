@@ -27,8 +27,8 @@ export default function SmartInput({ field, value, onChange }) {
       ? raw.replace(/\D/g, "").slice(0, field.maxLength)
       : useCurrencyFormatting
         ? raw.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".")
-        : (isDecimal ? raw : (config.format ? config.format(raw) : raw));
-    onChange(isDecimal && !digitsOnly && !useCurrencyFormatting && formatted !== '' ? Number(formatted) : formatted);
+        : (config.format ? config.format(raw) : raw);
+    onChange(formatted);
 
     // Validación en tiempo real (solo CUIT)
     if (config.validate && formatted.replace(/\D/g, "").length === 11) {
@@ -94,9 +94,8 @@ export default function SmartInput({ field, value, onChange }) {
     value: value ?? "",
     onChange: handleChange,
     placeholder: field.placeholder || (field.name?.includes("hora") ? "14:00" : undefined),
-    type: digitsOnly ? "text" : (isDecimal && !useCurrencyFormatting ? "number" : "text"),
-    step: isDecimal && !useCurrencyFormatting && !digitsOnly ? "any" : undefined,
-    maxLength: digitsOnly ? field.maxLength : (isDecimal && !useCurrencyFormatting ? undefined : (config.maxLength || undefined)),
+    type: "text",
+    maxLength: digitsOnly ? field.maxLength : (config.maxLength || undefined),
     inputMode: digitsOnly ? "numeric" : config.inputMode,
     pattern: digitsOnly ? "[0-9]*" : config.pattern,
     list: field.options?.length ? `${field.name}-options` : undefined,

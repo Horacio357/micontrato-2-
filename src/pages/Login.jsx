@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
-import { ShieldCheck, UserCheck, ArrowRight, FileText } from 'lucide-react';
+import { ShieldCheck, UserCheck, ArrowRight, FileText, AlertCircle } from 'lucide-react';
 import Navbar from '@/components/landing/Navbar';
 
 export default function Login() {
@@ -16,14 +16,28 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const { checkUserAuth } = useAuth();
+  const { isAuthenticated, isLoadingAuth, checkUserAuth } = useAuth();
   const returnTo = params.get('returnTo');
   const contractIdParam = params.get('contractId') || (returnTo?.includes('/contrato/') ? returnTo.split('/contrato/')[1] : null);
+
+  useEffect(() => {
+    if (isAuthenticated && !isLoadingAuth) {
+      if (returnTo) {
+        navigate(returnTo);
+      } else if (contractIdParam) {
+        navigate(`/mi-cuenta/contrato/${contractIdParam}`);
+      } else {
+        navigate('/mis-contratos');
+      }
+    }
+  }, [isAuthenticated, isLoadingAuth, returnTo, contractIdParam, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage('');
 
     try {
       if (isRegister) {
@@ -44,7 +58,9 @@ export default function Login() {
         navigate('/mis-contratos');
       }
     } catch (error) {
-      toast.error(error.message || 'Error en la autenticación');
+      const msg = error.message || 'Error en la autenticación';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -52,6 +68,7 @@ export default function Login() {
 
   const handleQuickLogin = (demoEmail, demoPass) => {
     setIsRegister(false);
+    setErrorMessage('');
     setEmail(demoEmail);
     setPassword(demoPass);
   };
@@ -98,6 +115,13 @@ export default function Login() {
               Crear Cuenta
             </button>
           </div>
+
+          {errorMessage && (
+            <div className="mb-5 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium flex items-center gap-2.5 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 text-destructive" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isRegister && (

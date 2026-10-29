@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkUserAuth = async () => {
-    setIsLoadingAuth(true);
+    if (!authChecked) setIsLoadingAuth(true);
     setAuthError(null);
 
     // Timeout de seguridad: garantiza que la interfaz nunca se quede en bucle de carga

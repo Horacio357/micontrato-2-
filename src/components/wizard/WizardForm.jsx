@@ -78,12 +78,6 @@ export default function WizardForm({ step, formData, onChange, onNext, onBack, i
     return null;
   }, [step.fields, formData]);
 
-  // Campos de estado civil presentes en este paso, para disparar asentimiento conyugal
-  const estadoCivilFields = useMemo(
-    () => visibleFields.filter((f) => f.name.toLowerCase().includes("estado_civil")),
-    [visibleFields]
-  );
-
   // Detecta si algún campo del paso actual es dirección → carga Google Places lazy
   const hasAddressField = useMemo(() =>
     visibleFields.some((f) =>
@@ -94,11 +88,11 @@ export default function WizardForm({ step, formData, onChange, onNext, onBack, i
 
   useGooglePlaces(hasAddressField);
 
-  // Validación de avance: campos requeridos + CUIT válido + fechas + asentimiento conyugal
+  // Validación de avance: campos requeridos + CUIT válido + fechas
   const allRequiredFilled = useMemo(() => {
     if (disabled || dateError || guarantorError) return false;
 
-    const requiredOk = visibleFields
+    return visibleFields
       .filter((f) => isFieldRequired(f))
       .every((f) => {
         const val = formData[f.name];
@@ -110,16 +104,7 @@ export default function WizardForm({ step, formData, onChange, onNext, onBack, i
         }
         return true;
       });
-    if (!requiredOk) return false;
-
-    // Asentimiento conyugal: si hay estado civil "Casado/a", exigir datos del cónyuge
-    return estadoCivilFields.every((f) => {
-      if (formData[f.name] !== "Casado/a") return true;
-      const nombre = formData[`${f.name}_conyuge_nombre`];
-      const dni = formData[`${f.name}_conyuge_dni`];
-      return !!nombre?.toString().trim() && !!dni?.toString().trim();
-    });
-  }, [disabled, dateError, guarantorError, visibleFields, formData, estadoCivilFields, isFieldRequired]);
+  }, [disabled, dateError, guarantorError, visibleFields, formData, isFieldRequired]);
 
   return (
     <motion.div
@@ -179,28 +164,6 @@ export default function WizardForm({ step, formData, onChange, onNext, onBack, i
                 value={formData[field.name]}
                 onChange={(val) => handleFieldChange(field.name, val)}
               />
-            )}
-
-            {/* Asentimiento conyugal: si esta persona está casada, pedir datos del cónyuge */}
-            {field.name.toLowerCase().includes("estado_civil") && formData[field.name] === "Casado/a" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pl-4 border-l-2 border-accent/30">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Nombre del cónyuge</Label>
-                  <Input
-                    value={formData[`${field.name}_conyuge_nombre`] || ""}
-                    onChange={(e) => handleFieldChange(`${field.name}_conyuge_nombre`, e.target.value)}
-                    placeholder="Nombre y apellido del cónyuge"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">DNI del cónyuge</Label>
-                  <Input
-                    value={formData[`${field.name}_conyuge_dni`] || ""}
-                    onChange={(e) => handleFieldChange(`${field.name}_conyuge_dni`, e.target.value)}
-                    placeholder="12.345.678"
-                  />
-                </div>
-              </div>
             )}
           </div>
         ))}

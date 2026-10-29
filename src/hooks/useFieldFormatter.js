@@ -28,13 +28,16 @@ export function getFieldConfig(fieldName = "", fieldType = "text") {
     return { inputMode: "decimal", pattern: "[0-9.]*", format: formatMonto, validate: null, maxLength: 15 };
   }
   if (name.includes("superficie") || name.includes("m2") || name.includes("metros") || name.includes("area")) {
-    return { inputMode: "numeric", pattern: "[0-9]*", format: formatNumero, validate: null, maxLength: 6 };
+    return { inputMode: "numeric", pattern: "[0-9.]*", format: formatNumero, validate: null, maxLength: 8 };
   }
   if (name.includes("codigo_postal") || name.includes("cp") || name.includes("postal")) {
-    return { inputMode: "numeric", pattern: "[0-9]*", format: formatNumero, validate: null, maxLength: 5 };
+    return { inputMode: "numeric", pattern: "[0-9]*", format: (v) => v.replace(/\D/g, "").slice(0, 5), validate: null, maxLength: 5 };
+  }
+  if (name.includes("ano") || name.includes("año") || name.includes("dia_") || name.includes("_dia") || name.includes("dias_") || name.includes("_meses")) {
+    return { inputMode: "numeric", pattern: "[0-9]*", format: (v) => v.replace(/\D/g, "").slice(0, 4), validate: null, maxLength: 4 };
   }
   if (fieldType === "number") {
-    return { inputMode: "numeric", pattern: "[0-9]*", format: formatNumero, validate: null, maxLength: 10 };
+    return { inputMode: "numeric", pattern: "[0-9.]*", format: formatNumero, validate: null, maxLength: 15 };
   }
 
   return { inputMode: null, pattern: null, format: null, validate: null, maxLength: null };
@@ -76,7 +79,12 @@ export function formatMonto(value) {
 }
 
 export function formatNumero(value) {
-  return value.replace(/\D/g, "");
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length > 3) {
+    return Number(digits).toLocaleString("es-AR");
+  }
+  return digits;
 }
 
 export function validateCUIT(cuit) {

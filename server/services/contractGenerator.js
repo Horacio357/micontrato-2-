@@ -209,6 +209,8 @@ const COMERCIAL_CLAUSULA_GARANTES_AUSENCIA = `DÉCIMO SÉPTIMA: Garantía: Las p
 
 const COMERCIAL_CLAUSULA_GARANTES_PRESENTE = `DÉCIMO SÉPTIMA: Garantía: Presentes en este acto, el/la Sr./Sra. {{garantes.g1_nombre_opcional}}, D.N.I. Nº {{garantes.g1_dni_opcional}}, C.U.I.T. Nº {{garantes.g1_cuit_cuil_opcional}}, correo electrónico: {{garantes.g1_correo_electronico_opcional}}, con domicilio en calle {{garantes.g1_domicilio_calle_opcional}}, de la ciudad de {{garantes.g1_ciudad_opcional}}, departamento/partido de {{garantes.g1_departamento_opcional}}, Provincia de {{garantes.g1_provincia_opcional}}, de nacionalidad {{garantes.g1_nacionalidad_opcional}}, mayor de edad, declara conocer el contenido de este contrato en todas sus partes y asume por el presente el carácter de garante solidario liso, llano y principal pagador por todos los alquileres e indemnizaciones, y por todas y cada una de las obligaciones asumidas por la PARTE LOCATARIA en este contrato, renunciando formal y expresamente a los beneficios de excusión y división (Arts. 1584 y 1589 del CCCN), hasta que la PARTE LOCADORA sea restituida de la propiedad, libre de ocupantes y en las condiciones pactadas. Comprende los gastos y costas de los juicios que se dedujeren contra su garantido y hasta la cancelación total de las obligaciones correspondientes.`;
 
+const COMERCIAL_CLAUSULA_GARANTES_2 = `DÉCIMO SÉPTIMA: Garantía: Presentes en este acto, por una parte el/la Sr./Sra. {{garantes.g1_nombre_opcional}}, D.N.I. Nº {{garantes.g1_dni_opcional}}, C.U.I.T. Nº {{garantes.g1_cuit_cuil_opcional}}, correo electrónico: {{garantes.g1_correo_electronico_opcional}}, con domicilio en calle {{garantes.g1_domicilio_calle_opcional}}, de la ciudad de {{garantes.g1_ciudad_opcional}}, departamento/partido de {{garantes.g1_departamento_opcional}}, Provincia de {{garantes.g1_provincia_opcional}}, de nacionalidad {{garantes.g1_nacionalidad_opcional}}, mayor de edad; y por la otra parte el/la Sr./Sra. {{garantes.g2_nombre_opcional}}, D.N.I. Nº {{garantes.g2_dni_opcional}}, C.U.I.T. Nº {{garantes.g2_cuit_cuil_opcional}}, correo electrónico: {{garantes.g2_correo_electronico_opcional}}, con domicilio en calle {{garantes.g2_domicilio_calle_opcional}}, de la ciudad de {{garantes.g2_ciudad_opcional}}, departamento/partido de {{garantes.g2_departamento_opcional}}, Provincia de {{garantes.g2_provincia_opcional}}, de nacionalidad {{garantes.g2_nacionalidad_opcional}}, mayor de edad, declaran conocer el contenido de este contrato en todas sus partes y asumen solidariamente por el presente el carácter de garantes solidarios lisos, llanos y principales pagadores por todos los alquileres e indemnizaciones, y por todas y cada una de las obligaciones asumidas por la PARTE LOCATARIA en este contrato, renunciando formal y expresamente a los beneficios de excusión y división (Arts. 1584 y 1589 del CCCN), hasta que la PARTE LOCADORA sea restituida de la propiedad, libre de ocupantes y en las condiciones pactadas. Comprende los gastos y costas de los juicios que se dedujeren contra su garantido y hasta la cancelación total de las obligaciones correspondientes.`;
+
 const MUTUO_ONEROSO = {
   field_map: {
     "lugar_celebracion_required": ["lugar_celebracion"],
@@ -321,7 +323,16 @@ function getV9Template(document) {
 }
 
 function getCommercialV9Template() {
-  if (!commercialV9Template) commercialV9Template = getV9Template(comercialV9Json);
+  if (!commercialV9Template) {
+    const template = getV9Template(comercialV9Json);
+    const field_map = { ...template.field_map };
+    [1, 2].forEach((number) => {
+      ["nombre", "dni", "cuit_cuil", "nacionalidad", "domicilio_calle", "ciudad", "departamento", "provincia", "correo_electronico"].forEach((field) => {
+        field_map[`garantes.g${number}_${field}_opcional`] = [`garantes_g${number}_${field}`];
+      });
+    });
+    commercialV9Template = { ...template, field_map };
+  }
   return commercialV9Template;
 }
 
@@ -330,7 +341,6 @@ function getViviendaV9Template() {
     const template = getV9Template(viviendaV9Json);
     let text = template.template_text
       .replace(/\n\s*[1-5]\s*(?=\n|$)/g, "")
-      .replace(", nacido el {{locatario.fecha_nacimiento_required}}", "")
       .replace("SEGUNDA (descripción): La UNIDAD LOCADA está compuesta por {{inmueble.cantidad_habitaciones_required}} habitaciones, especificamente {{inmueble.habitaciones_detalle_required}}.", "SEGUNDA (descripción): La UNIDAD LOCADA está compuesta por {{inmueble.habitaciones_detalle_required}}.")
       .replace("DECIMO CUARTA (depósito en garantía)", "DECIMO QUINTA (depósito en garantía)")
       .replace("DECIMO QUINTA (garantes)", "DECIMO SEXTA (garantes)")
@@ -340,10 +350,14 @@ function getViviendaV9Template() {
       .replace("DECIMO NOVENA (firmas e instrumentación)", "VIGÉSIMA (firmas e instrumentación)")
       .replace("VIGECIMO (lugar y fecha)", "VIGÉSIMA PRIMERA (lugar y fecha)")
       .replace("Tribunales Ordinarios de {{cierre.centro_judicial_required}}", "Tribunales Ordinarios competentes de la Ciudad de {{inmueble.ciudad_inmueble_required}}, Provincia de {{inmueble.provincia_inmueble_required}}")
-      .replace("{{cierre.cantidad_ejemplares_letras_required}} ({{cierre.cantidad_ejemplares_numeros_required}}) ejemplares", "dos (2) ejemplares")
-      .replace(/VIGÉSIMA PRIMERA \(lugar y fecha\):[\s\S]*$/, "VIGÉSIMA PRIMERA (lugar y fecha): En prueba de plena conformidad y para su fiel cumplimiento, se firman dos (2) ejemplares de un mismo tenor y a un solo efecto en la Ciudad de {{inmueble.ciudad_inmueble_required}}, Provincia de {{inmueble.provincia_inmueble_required}}, el día {{cierre.fecha_firma_required}}.");
-    const field_map = { ...template.field_map, "cierre.fecha_firma_required": ["cierre_fecha_firma"] };
-    ["locatario.fecha_nacimiento_required", "cierre.centro_judicial_required", "cierre.cantidad_ejemplares_letras_required", "cierre.cantidad_ejemplares_numeros_required", "cierre.ciudad_firma_required", "cierre.departamento_firma_required", "cierre.provincia_firma_required", "cierre.dia_firma_required", "cierre.mes_firma_required", "cierre.ano_firma_required"].forEach((key) => delete field_map[key]);
+      .replace(/VIGÉSIMA PRIMERA \(lugar y fecha\):[\s\S]*$/, "VIGÉSIMA PRIMERA (lugar y fecha): En prueba de plena conformidad y para su fiel cumplimiento, se firman {{cierre.cantidad_ejemplares_letras_required}} ({{cierre.cantidad_ejemplares_numeros_required}}) ejemplares de un mismo tenor y a un solo efecto en la Ciudad de {{inmueble.ciudad_inmueble_required}}, Provincia de {{inmueble.provincia_inmueble_required}}, el día {{cierre.fecha_firma_required}}.");
+    const field_map = {
+      ...template.field_map,
+      "cierre.fecha_firma_required": ["cierre_fecha_firma"],
+      "cierre.cantidad_ejemplares_numeros_required": ["cierre_cantidad_ejemplares_numeros"],
+      "cierre.cantidad_ejemplares_letras_required": ["cierre_cantidad_ejemplares_numeros"],
+    };
+    ["locador.fecha_nacimiento_nacionalidad_required", "locatario.fecha_nacimiento_required", "cierre.centro_judicial_required", "cierre.ciudad_firma_required", "cierre.departamento_firma_required", "cierre.provincia_firma_required", "cierre.dia_firma_required", "cierre.mes_firma_required", "cierre.ano_firma_required"].forEach((key) => delete field_map[key]);
     [1, 2].forEach((number) => ["nombre", "dni", "cuit_cuil", "nacionalidad", "estado_civil", "domicilio_calle", "ciudad", "departamento", "provincia", "correo_electronico"].forEach((field) => {
       field_map[`garantes.g${number}_${field}_opcional`] = [`garantes_g${number}_${field}`];
     }));
@@ -395,19 +409,37 @@ function capitalizeFirst(value) {
 }
 
 function capitalizeTitle(value) {
-  if (!value) return value;
-  return value.split(" ").map((word, i) => {
+  if (!value || typeof value !== "string") return value;
+  return value.trim().split(/\s+/).map((word, i) => {
     const lower = word.toLowerCase();
     if (i > 0 && TITLE_PARTICLES.has(lower)) return lower;
-    return word.charAt(0).toUpperCase() + word.slice(1);
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
   }).join(" ");
 }
 
 function getCapitalizationStyle(key) {
   const fieldPart = key.split(".").pop().replace(/_(required|opcional)$/, "").toLowerCase();
-  if (NAME_FIELDS.has(fieldPart) || /^g\d+_nombre$/.test(fieldPart)) return "first";
-  if (TOPONYM_FIELDS.has(fieldPart)) return "title";
+  if (
+    NAME_FIELDS.has(fieldPart) ||
+    /nombre|apellido|mutuante|mutuario|locador|locatario|garante|fiador|titular/.test(fieldPart) ||
+    TOPONYM_FIELDS.has(fieldPart) ||
+    /ciudad|localidad|provincia|calle|barrio|departamento|partido|jurisdiccion|tribunales/.test(fieldPart)
+  ) {
+    return "title";
+  }
   return null;
+}
+
+function formatContractNumber(value, key) {
+  if (value === null || value === undefined) return value;
+  if (/cuit|cuil|dni|telefono|cbu|cvu|fecha|ano|dia|hora|porcentaje|interes|tna|tasa/i.test(key)) {
+    return value;
+  }
+  const str = String(value).trim();
+  if (/^\d{4,}$/.test(str)) {
+    return Number(str).toLocaleString("es-AR");
+  }
+  return value;
 }
 
 function interpolate(template, formData, fieldMap) {
@@ -415,11 +447,12 @@ function interpolate(template, formData, fieldMap) {
     const value = resolveValue(key, formData, fieldMap);
     if (!letters && value === null && key.endsWith("_otro_opcional")) return "";
     if (letters) return escribirEnLetras(value, /interes|porcentaje|tna|tasa|moratorio|compensatorio/i.test(key));
-    const result = value ?? "___________";
+    let result = value ?? "___________";
     if (result === "___________") return result;
+    result = formatContractNumber(result, key);
     const style = getCapitalizationStyle(key);
-    if (style === "first") return capitalizeFirst(result);
     if (style === "title") return capitalizeTitle(result);
+    if (style === "first") return capitalizeFirst(result);
     return result;
   });
 }
@@ -468,8 +501,9 @@ export async function buildStrictContract(slug, formData) {
       formData = { ...formData, inmueble_piso_y_numero_local: formData.inmueble_piso_y_numero_local || "No aplica" };
     }
 
-    const tieneGarante = formData.garantes_g1_nombre && String(formData.garantes_g1_nombre).trim() !== "" && formData.garantes_cantidad !== "No aplica";
-    if (tieneGarante) {
+    if (formData.garantes_cantidad === "2") {
+      templateText = templateText.replace(COMERCIAL_CLAUSULA_GARANTES_ORIGINAL, COMERCIAL_CLAUSULA_GARANTES_2);
+    } else if (formData.garantes_cantidad === "1" || (formData.garantes_g1_nombre && String(formData.garantes_g1_nombre).trim() !== "" && formData.garantes_cantidad !== "No aplica")) {
       templateText = templateText.replace(COMERCIAL_CLAUSULA_GARANTES_ORIGINAL, COMERCIAL_CLAUSULA_GARANTES_PRESENTE);
     } else {
       templateText = templateText.replace(COMERCIAL_CLAUSULA_GARANTES_ORIGINAL, COMERCIAL_CLAUSULA_GARANTES_AUSENCIA);
@@ -477,10 +511,25 @@ export async function buildStrictContract(slug, formData) {
 
     const cantMeses = Number(formData.condiciones_economicas_meses_indemnizacion_menor_plazo_numeros || 1);
     const palabraMeses = cantMeses === 1 ? "mes" : "meses";
-    templateText = templateText.replace(
-      "({{condiciones_economicas.meses_indemnizacion_menor_plazo_letras_required}}) del precio del alquiler",
-      `({{condiciones_economicas.meses_indemnizacion_menor_plazo_letras_required}}) ${palabraMeses} del precio del alquiler`
-    );
+    templateText = templateText.replace("mes/meses", palabraMeses);
+
+    const selladoOption = String(formData.condiciones_economicas_parte_a_cargo_sellado || "").trim().toUpperCase();
+    if (selladoOption.includes("AMBAS")) {
+      templateText = templateText.replace(
+        "Es a cargo de la PARTE {{condiciones_economicas.parte_a_cargo_sellado_required}}",
+        "Es a cargo de AMBAS PARTES EN PARTES IGUALES"
+      );
+    } else if (selladoOption === "LOCADOR") {
+      templateText = templateText.replace(
+        "Es a cargo de la PARTE {{condiciones_economicas.parte_a_cargo_sellado_required}}",
+        "Es a cargo de la PARTE LOCADORA"
+      );
+    } else if (selladoOption === "LOCATARIO") {
+      templateText = templateText.replace(
+        "Es a cargo de la PARTE {{condiciones_economicas.parte_a_cargo_sellado_required}}",
+        "Es a cargo de la PARTE LOCATARIA"
+      );
+    }
 
     if (formData.inmueble_destino_locacion !== "Otro") {
       templateText = templateText.replace("{{inmueble.destino_locacion_required}} {{inmueble.destino_otro_opcional}}.", "{{inmueble.destino_locacion_required}}.");
@@ -534,6 +583,17 @@ export async function buildStrictContract(slug, formData) {
         ", inscripto en el registro o habilitación turística local correspondiente bajo el número {{inmueble.registro_turistico_opcional}}"
       );
     }
+
+    const mascotaOption = String(formData.normas_admision_mascotas || "").trim().toLowerCase();
+    let reglaMascotas = "";
+    if (mascotaOption.includes("no se admiten") || mascotaOption.includes("no")) {
+      reglaMascotas = "Asimismo, queda terminantemente prohibido el ingreso o permanencia de mascotas o animales de cualquier especie en el inmueble. ";
+    } else if (mascotaOption.includes("sí") || mascotaOption.includes("si")) {
+      reglaMascotas = "Se autoriza expresamente el ingreso y permanencia de mascotas en el inmueble, siendo el LOCATARIO el único responsable por cualquier rotura, suciedad o molestia que las mismas ocasionen. ";
+    } else if (mascotaOption.includes("consultar")) {
+      reglaMascotas = "La tenencia y permanencia de mascotas en el inmueble queda sujeta a consulta y expresa autorización previa por escrito del LOCADOR. ";
+    }
+    templateText = templateText.replace("{{normas.mascotas_regla_opcional}}", reglaMascotas);
   }
 
   if (slug === "mutuo-oneroso") {
@@ -560,6 +620,16 @@ export async function buildStrictContract(slug, formData) {
     const count = Number(formData.garantes_cantidad);
     for (let number = 1; number <= count; number += 1) {
       ["nombre", "dni", "cuit_cuil", "nacionalidad", "estado_civil", "domicilio_calle", "ciudad", "departamento", "provincia", "correo_electronico"].forEach((field) => {
+        const key = `garantes.g${number}_${field}_opcional`;
+        if (resolveValue(key, formData, template.field_map) === null) conditionalMissing.push(key);
+      });
+    }
+  }
+
+  if (slug === "locacion-comercial" && ["1", "2"].includes(String(formData.garantes_cantidad))) {
+    const count = Number(formData.garantes_cantidad);
+    for (let number = 1; number <= count; number += 1) {
+      ["nombre", "dni", "cuit_cuil", "nacionalidad", "domicilio_calle", "ciudad", "departamento", "provincia", "correo_electronico"].forEach((field) => {
         const key = `garantes.g${number}_${field}_opcional`;
         if (resolveValue(key, formData, template.field_map) === null) conditionalMissing.push(key);
       });
