@@ -279,6 +279,12 @@ router.post('/:entity', async (req, res) => {
       if (!isAdmin(req)) stripProtectedContractFields(payload);
       payload.created_by_id = req.user ? req.user.id : `guest_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       if (!payload.status) payload.status = 'pending_payment';
+      if (!payload.signing_token_a) {
+        payload.signing_token_a = `sigA_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      }
+      if (!payload.signing_token_b) {
+        payload.signing_token_b = `sigB_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      }
       if (typeof payload.form_data === 'string') {
         try {
           payload.form_data = JSON.parse(payload.form_data);

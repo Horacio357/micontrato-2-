@@ -249,7 +249,8 @@ router.post('/createContractSignature', async (req, res) => {
       !contract.signature_part_b?.signed_at &&
       (contract.signature_part_a?.signed_at || isContractPaid(contract));
 
-    const canSign = isOwnerOrAdmin(user, contract) || tokenMatches || isPartyBSigning;
+    const isGuest = isGuestOwner(contract.created_by_id);
+    const canSign = isOwnerOrAdmin(user, contract) || isGuest || tokenMatches || isPartyBSigning;
     if (!canSign) {
       return res.status(403).json({ error: 'No tenés permisos para firmar este contrato' });
     }
@@ -299,6 +300,7 @@ router.post('/createContractSignature', async (req, res) => {
         [sigFieldKey]: sigData,
         signature_status: newSigStatus,
         status: newSigStatus === 'fully_signed' ? 'signed' : contract.status,
+        ...(isGuest ? { created_by_id: user.id } : {}),
       },
     });
 
@@ -364,13 +366,17 @@ async function markContractPaid(user, contractId, paymentMethod) {
   }
   const contract = await prisma.generatedContract.findUnique({ where: { id: contractId } });
   if (!contract) return { status: 404, error: 'Contrato no encontrado' };
-  if (!isOwnerOrAdmin(user, contract)) return { status: 403, error: 'No tenés acceso a este contrato' };
-  if (!isContractPaid(contract)) {
-    await prisma.generatedContract.update({
-      where: { id: contractId },
-      data: { status: 'paid', payment_method: paymentMethod },
-    });
-  }
+  const isOwner = isOwnerOrAdmin(user, contract) || isGuestOwner(contract.created_by_id);
+  if (!isOwner) return { status: 403, error: 'No tenés acceso a este contrato' };
+  
+  await prisma.generatedContract.update({
+    where: { id: contractId },
+    data: {
+      status: 'paid',
+      payment_method: paymentMethod,
+      ...(isGuestOwner(contract.created_by_id) ? { created_by_id: user.id } : {}),
+    },
+  });
   return { ok: true };
 }
 

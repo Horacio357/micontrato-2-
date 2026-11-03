@@ -192,30 +192,39 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Opciones rápidas de QA para pruebas locales */}
-          {(import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+          {/* Opciones rápidas de QA para pruebas y evaluación */}
+          {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_QA_PAYMENTS === 'true' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
             <div className="mt-6 pt-5 border-t border-border space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground text-center">
-                Accesos Rápidos de Prueba (QA / Local)
+                Accesos Rápidos de Prueba (QA / Evaluación)
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('demo@micontrato.com.ar', '123456')}
-                  className="p-2 rounded-lg bg-accent/5 hover:bg-accent/10 border border-accent/20 text-xs text-accent font-medium flex items-center justify-center gap-1.5 text-left transition-colors"
+                  className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100/70 border border-emerald-200 text-xs text-emerald-800 font-medium flex items-center justify-center gap-1.5 text-left transition-colors"
                   title="Usuario con membresía activa para descargas ilimitadas"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
                   <span>Con Membresía</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin('sinpago@micontrato.com.ar', '123456')}
-                  className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary border border-border text-xs text-muted-foreground hover:text-foreground font-medium flex items-center justify-center gap-1.5 text-left transition-colors"
+                  className="p-2 rounded-lg bg-amber-50 hover:bg-amber-100/70 border border-amber-200 text-xs text-amber-800 font-medium flex items-center justify-center gap-1.5 text-left transition-colors"
                   title="Usuario nuevo sin membresía para probar pantalla de pago"
                 >
-                  <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                  <UserCheck className="w-3.5 h-3.5 shrink-0 text-amber-600" />
                   <span>Sin Pago previo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('admin@micontratos.com', 'admin123')}
+                  className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200/80 border border-slate-300 text-xs text-slate-800 font-medium flex items-center justify-center gap-1.5 text-left transition-colors"
+                  title="Super Administrador para gestionar panel /admin"
+                >
+                  <Sparkles className="w-3.5 h-3.5 shrink-0 text-indigo-600" />
+                  <span>Super Admin</span>
                 </button>
               </div>
             </div>

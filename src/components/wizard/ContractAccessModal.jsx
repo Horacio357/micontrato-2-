@@ -39,7 +39,11 @@ export default function ContractAccessModal({
   const contractId = contract?.id;
   const isContractPaid = contract?.status === 'paid' || contract?.status === 'downloaded' || contract?.status === 'signed';
   const hasActiveSubscription = user?.subscription_status === 'active';
-  const isDevOrQA = import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const isDevOrQA =
+    import.meta.env.DEV ||
+    import.meta.env.VITE_ENABLE_QA_PAYMENTS === 'true' ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
 
   // 1. Fast QA 1-click login handler
   const handleQALogin = async (email, password) => {
@@ -48,8 +52,8 @@ export default function ContractAccessModal({
       await base44.auth.login(email, password, contractId);
       await checkUserAuth();
       toast.success(`Sesión iniciada como ${email}`);
-      if (email === 'demo@micontrato.com.ar') {
-        toast.info('Usuario con membresía activa detectado.');
+      if (email === 'demo@micontrato.com.ar' || email === 'admin@micontratos.com') {
+        toast.info('Usuario con acceso completo.');
         onClose();
         onActionComplete?.();
       }
@@ -171,7 +175,7 @@ export default function ContractAccessModal({
                   Para acelerar la evaluación del flujo, ingresá con 1-click simulando distintos perfiles:
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <Button
                     type="button"
                     size="sm"
@@ -182,7 +186,7 @@ export default function ContractAccessModal({
                   >
                     <UserCheck className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
                     {loadingAction ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
-                    Probar con Membresía Activa
+                    Con Membresía Pro
                   </Button>
 
                   <Button
@@ -195,7 +199,20 @@ export default function ContractAccessModal({
                   >
                     <UserCheck className="w-3.5 h-3.5 mr-1.5 text-amber-600" />
                     {loadingAction ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
-                    Probar sin Membresía (Flujo de Pago)
+                    Sin Pago Previo
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={loadingAction}
+                    onClick={() => handleQALogin('admin@micontratos.com', 'admin123')}
+                    className="w-full justify-start text-xs bg-white hover:bg-indigo-50 hover:border-indigo-300 text-slate-700"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5 text-indigo-600" />
+                    {loadingAction ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                    Super Admin
                   </Button>
                 </div>
               </div>
@@ -206,7 +223,7 @@ export default function ContractAccessModal({
              VIEW 2: User is authenticated but requires payment/membership
              =================================================== */
           <div>
-            <DialogHeader className="text-center sm:text-center pb-4">
+            <DialogHeader className="text-center sm:text-center pb-3">
               <div className="flex justify-center mb-2">
                 <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-xs px-3 py-1">
                   Conectado como <strong className="ml-1 font-semibold">{user?.email}</strong>
@@ -218,6 +235,12 @@ export default function ContractAccessModal({
               <DialogDescription className="text-sm text-muted-foreground mt-1 max-w-lg mx-auto">
                 Elegí la opción que mejor se adapte a tu necesidad: adquirí este único documento o suscribite a descargas ilimitadas.
               </DialogDescription>
+              {isDevOrQA && (
+                <div className="mt-2.5 p-2 rounded-lg bg-amber-50 border border-amber-200/80 flex items-center justify-center gap-2 text-xs text-amber-900">
+                  <Zap className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span><strong>Modo QA / Pruebas Activo:</strong> Cualquier opción desbloquea la descarga de forma inmediata y gratuita sin cobros reales.</span>
+                </div>
+              )}
             </DialogHeader>
 
             {/* Pricing Options Cards */}

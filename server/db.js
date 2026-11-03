@@ -263,6 +263,37 @@ export async function initDb() {
         console.log(`✅ Super Administrador inicial creado: ${adminEmail}`);
       }
 
+      // Seed usuarios de prueba QA si no existen
+      const existingDemo = await prisma.user.findUnique({ where: { email: 'demo@micontrato.com.ar' } });
+      if (!existingDemo) {
+        const demoPass = await bcrypt.hash('123456', 10);
+        await prisma.user.create({
+          data: {
+            email: 'demo@micontrato.com.ar',
+            name: 'Usuario Profesional Demo (QA)',
+            password: demoPass,
+            role: 'user',
+            subscription_status: 'active',
+          },
+        });
+        console.log('✅ Usuario demo QA con membresía creado: demo@micontrato.com.ar');
+      }
+
+      const existingSinPago = await prisma.user.findUnique({ where: { email: 'sinpago@micontrato.com.ar' } });
+      if (!existingSinPago) {
+        const sinPagoPass = await bcrypt.hash('123456', 10);
+        await prisma.user.create({
+          data: {
+            email: 'sinpago@micontrato.com.ar',
+            name: 'Usuario Nuevo Sin Pago (QA)',
+            password: sinPagoPass,
+            role: 'user',
+            subscription_status: 'none',
+          },
+        });
+        console.log('✅ Usuario sin pago QA creado: sinpago@micontrato.com.ar');
+      }
+
       // 2. Seed de plantillas base si la tabla está vacía
       const currentTemplates = await prisma.contractTemplate.findMany({ take: 1 });
       if (currentTemplates.length === 0) {
