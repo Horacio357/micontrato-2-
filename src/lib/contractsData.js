@@ -549,9 +549,29 @@ export const DEFAULT_WIZARD_STEPS = [
   },
 ];
 
+const ESTADOS_CIVILES = ["Soltero/a", "Casado/a", "Divorciado/a", "Viudo/a"];
 const COMMERCIAL_MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const ROOM_OPTIONS = ["No tiene", "1", "2", "3", "4", "5", "6"];
+const visibleAfterTotal = { field: "inmueble_cantidad_habitaciones", notEmpty: true };
 const comG1Visible = { field: "garantes_cantidad", oneOf: ["1", "2"] };
 const comG2Visible = { field: "garantes_cantidad", value: "2" };
+const g1Visible = { field: "garantes_cantidad", oneOf: ["1", "2"] };
+const g2Visible = { field: "garantes_cantidad", value: "2" };
+
+function guarantorFields(number, visibility) {
+  return [
+    { name: `garantes_g${number}_nombre`, label: `Garante ${number} - Nombre completo`, requiredWhen: visibility },
+    { name: `garantes_g${number}_dni`, label: `Garante ${number} - DNI`, requiredWhen: visibility },
+    { name: `garantes_g${number}_cuit_cuil`, label: `Garante ${number} - CUIT/CUIL`, requiredWhen: visibility },
+    { name: `garantes_g${number}_nacionalidad`, label: `Garante ${number} - Nacionalidad`, requiredWhen: visibility },
+    { name: `garantes_g${number}_estado_civil`, label: `Garante ${number} - Estado civil`, type: "select", options: ESTADOS_CIVILES, requiredWhen: visibility },
+    { name: `garantes_g${number}_domicilio_calle`, label: `Garante ${number} - Domicilio (calle y altura)`, requiredWhen: visibility },
+    { name: `garantes_g${number}_ciudad`, label: `Garante ${number} - Ciudad`, requiredWhen: visibility },
+    { name: `garantes_g${number}_departamento`, label: `Garante ${number} - Departamento o partido`, requiredWhen: visibility },
+    { name: `garantes_g${number}_provincia`, label: `Garante ${number} - Provincia`, type: "select", options: PROVINCE_OPTIONS, requiredWhen: visibility },
+    { name: `garantes_g${number}_correo_electronico`, label: `Garante ${number} - Correo electrónico`, requiredWhen: visibility },
+  ].map((field) => ({ ...field, visibleWhen: visibility }));
+}
 
 const COMMERCIAL_V9_STEPS = [
   {
@@ -647,25 +667,6 @@ const COMMERCIAL_V9_STEPS = [
     ],
   },
 ];
-
-const ESTADOS_CIVILES = ["Soltero/a", "Casado/a", "Divorciado/a", "Viudo/a"];
-
-const ROOM_OPTIONS = ["No tiene", "1", "2", "3", "4", "5", "6"];
-const visibleAfterTotal = { field: "inmueble_cantidad_habitaciones", notEmpty: true };
-const g1Visible = { field: "garantes_cantidad", oneOf: ["1", "2"] };
-const g2Visible = { field: "garantes_cantidad", value: "2" };
-const guarantorFields = (number, visibility) => [
-  { name: `garantes_g${number}_nombre`, label: `Garante ${number} - Nombre completo`, requiredWhen: visibility },
-  { name: `garantes_g${number}_dni`, label: `Garante ${number} - DNI`, requiredWhen: visibility },
-  { name: `garantes_g${number}_cuit_cuil`, label: `Garante ${number} - CUIT/CUIL`, requiredWhen: visibility },
-  { name: `garantes_g${number}_nacionalidad`, label: `Garante ${number} - Nacionalidad`, requiredWhen: visibility },
-  { name: `garantes_g${number}_estado_civil`, label: `Garante ${number} - Estado civil`, type: "select", options: ESTADOS_CIVILES, requiredWhen: visibility },
-  { name: `garantes_g${number}_domicilio_calle`, label: `Garante ${number} - Domicilio (calle y altura)`, requiredWhen: visibility },
-  { name: `garantes_g${number}_ciudad`, label: `Garante ${number} - Ciudad`, requiredWhen: visibility },
-  { name: `garantes_g${number}_departamento`, label: `Garante ${number} - Departamento o partido`, requiredWhen: visibility },
-  { name: `garantes_g${number}_provincia`, label: `Garante ${number} - Provincia`, type: "select", options: PROVINCE_OPTIONS, requiredWhen: visibility },
-  { name: `garantes_g${number}_correo_electronico`, label: `Garante ${number} - Correo electrónico`, requiredWhen: visibility },
-].map((field) => ({ ...field, visibleWhen: visibility }));
 
 const VIVIENDA_V9_STEPS = [
   { title: "Datos del locador", fields: [
