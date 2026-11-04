@@ -1,14 +1,11 @@
-const CACHE_NAME = 'micontrato-v2';
-const STATIC_CACHE = 'micontrato-static-v2';
+const CACHE_NAME = 'micontrato-v4';
+const STATIC_CACHE = 'micontrato-static-v4';
 
-// Recursos del shell de la app a pre-cachear al instalar
-const PRECACHE_URLS = ['/', '/index.html'];
+// No precachear index.html para evitar desincronización de hashes con nuevos deploys
+const PRECACHE_URLS = [];
 
 // ─── Install: pre-cachea el shell ────────────────────────────────────────────
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
-  );
   self.skipWaiting();
 });
 
@@ -45,7 +42,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets estáticos (JS, CSS, imágenes) → Cache-first
+  // Assets estáticos con hash (JS, CSS, imágenes) → Cache-first
   if (
     url.pathname.match(/\.(js|css|woff2?|png|jpg|jpeg|svg|ico|webp)$/)
   ) {
@@ -53,12 +50,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navegación (HTML) → Network-first, fallback al shell
+  // Navegación (HTML) → Network-first: siempre pide la versión más reciente del servidor
   if (request.mode === 'navigate') {
     event.respondWith(
-      networkFirst(request, CACHE_NAME).catch(() =>
-        caches.match('/index.html')
-      )
+      fetch(request).catch(() => caches.match('/index.html'))
     );
     return;
   }

@@ -1,7 +1,11 @@
 const API_BASE = '/api';
 
 function getToken() {
-  return localStorage.getItem('base44_token') || localStorage.getItem('token') || '';
+  try {
+    return localStorage.getItem('base44_token') || localStorage.getItem('token') || '';
+  } catch {
+    return '';
+  }
 }
 
 async function request(endpoint, options = {}) {

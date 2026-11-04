@@ -57,6 +57,24 @@
       }
     }
     </script>
+
+    <!-- Pre-boot error trap: previene pantallas en blanco ante fallos de carga o scripts -->
+    <script>
+      window.addEventListener('error', function(event) {
+        var root = document.getElementById('root');
+        if (root && (!root.childNodes || root.childNodes.length === 0)) {
+          var msg = event.message || (event.error ? event.error.message : 'Error al cargar recursos');
+          root.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#f8fafc;font-family:system-ui,sans-serif;">' +
+            '<div style="max-width:480px;width:100%;background:#fff;padding:32px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #fee2e2;text-align:center;">' +
+              '<h2 style="font-size:18px;font-weight:700;color:#991b1b;margin-top:0;margin-bottom:8px;">No se pudo iniciar la aplicación</h2>' +
+              '<p style="font-size:14px;color:#7f1d1d;margin-bottom:20px;">' + msg + '</p>' +
+              '<p style="font-size:13px;color:#64748b;margin-bottom:20px;">Esto puede ocurrir si tu navegador tiene una versión anterior guardada en caché.</p>' +
+              '<button onclick="try{localStorage.clear();sessionStorage.clear();}catch(e){}if(navigator.serviceWorker){navigator.serviceWorker.getRegistrations().then(function(regs){regs.forEach(function(r){r.unregister()});location.reload(true);}).catch(function(){location.reload(true);});}else{location.reload(true);}" style="width:100%;padding:12px;background:#15294b;color:#fff;border-radius:10px;font-weight:600;border:none;cursor:pointer;">Limpiar caché y reintentar</button>' +
+            '</div>' +
+          '</div>';
+        }
+      }, true);
+    </script>
   </head>
   <body>
     <div id="root"></div>
