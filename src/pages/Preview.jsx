@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, ArrowRight, Shield, Check, Printer, Lock, Sparkles, Loader2, FileCheck } from "lucide-react";
+import { toast } from "sonner";
 import Navbar from "@/components/landing/Navbar";
 import ContractPreview from "@/components/wizard/ContractPreview";
 import AIContractPreview from "@/components/wizard/AIContractPreview";
@@ -56,6 +57,31 @@ export default function Preview() {
       setGeneratedText(parseContractText(contract.generated_text));
     }
   }, [contract?.generated_text]);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get("session_id");
+    const payment = urlParams.get("payment");
+
+    if (sessionId && payment === "success") {
+      base44.functions.invoke("verifyStripePayment", { sessionId, contractId })
+        .then((res) => {
+          if (res.data?.success || res.data?.status === "paid") {
+            toast.success("¡Pago acreditado con éxito! Tu contrato ha sido desbloqueado.");
+          }
+          queryClient.invalidateQueries({ queryKey: ["contract", contractId] });
+          queryClient.invalidateQueries({ queryKey: ["my-contracts"] });
+          queryClient.invalidateQueries({ queryKey: ["me"] });
+          window.history.replaceState({}, document.title, window.location.pathname);
+        })
+        .catch((err) => {
+          console.warn("Error al verificar pago en preview:", err);
+        });
+    } else if (payment === "cancelled") {
+      toast.info("El proceso de pago fue cancelado.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [contractId, queryClient]);
 
   const contractForDocx = contract
     ? { ...contract, generated_text: generatedText || contract.generated_text }

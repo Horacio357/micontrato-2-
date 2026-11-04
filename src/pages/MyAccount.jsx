@@ -1,4 +1,8 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import useAccountContracts from '@/components/account/useAccountContracts';
 import ContractsLoadError from '@/components/account/ContractsLoadError';
 import SubscriptionPanel from '@/components/account/SubscriptionPanel';
@@ -27,7 +31,33 @@ const sigBadgeMap = {
 };
 
 export default function MyAccount() {
+  const queryClient = useQueryClient();
   const { user, contracts, isLoading, isError, isFetching, retry } = useAccountContracts(true);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get("session_id");
+    const subscription = urlParams.get("subscription");
+
+    if (sessionId && subscription === "success") {
+      base44.functions.invoke("verifyStripePayment", { sessionId })
+        .then((res) => {
+          if (res.data?.success) {
+            toast.success("¡Suscripción Pro activada con éxito! Ya contás con acceso ilimitado.");
+          }
+          queryClient.invalidateQueries({ queryKey: ["me"] });
+          queryClient.invalidateQueries({ queryKey: ["subscription-status"] });
+          queryClient.invalidateQueries({ queryKey: ["my-contracts"] });
+          window.history.replaceState({}, document.title, window.location.pathname);
+        })
+        .catch((err) => {
+          console.warn("Error al verificar suscripción en retorno:", err);
+        });
+    } else if (subscription === "cancelled") {
+      toast.info("El proceso de suscripción fue cancelado.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [queryClient]);
 
 
 

@@ -64,7 +64,40 @@ export default function ContractAccessModal({
     }
   };
 
-  // 2. QA Simulate Single Contract Payment
+  // 2. Checkout real con Stripe (o fallback si se simula)
+  const handlePay = async (type = 'single') => {
+    setLoadingAction(true);
+    try {
+      const res = await base44.functions.invoke('createStripeCheckout', {
+        contractId,
+        type,
+      });
+      if (res.data?.url && res.data.url.includes('stripe.com')) {
+        window.location.href = res.data.url;
+        return;
+      }
+      if (res.data?.success || res.data?.url) {
+        if (contractId?.startsWith('local_')) {
+          const item = localStorage.getItem(`contract_${contractId}`);
+          if (item) {
+            const parsed = JSON.parse(item);
+            parsed.status = 'paid';
+            localStorage.setItem(`contract_${contractId}`, JSON.stringify(parsed));
+          }
+        }
+        await checkUserAuth();
+        toast.success(type === 'subscription' ? '⚡ Membresía Pro activada con éxito' : '⚡ Documento desbloqueado con éxito');
+        onClose();
+        onActionComplete?.();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Error al iniciar checkout con Stripe');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  // 3. QA Simulate Single Contract Payment
   const handleQAPaySingle = async () => {
     setLoadingAction(true);
     try {
@@ -275,7 +308,7 @@ export default function ContractAccessModal({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={handleQAPaySingle}
+                  onClick={() => handlePay('single')}
                   disabled={loadingAction}
                   className="w-full font-semibold border-slate-300 hover:bg-slate-50"
                 >
@@ -318,7 +351,7 @@ export default function ContractAccessModal({
                 </div>
                 <Button
                   size="sm"
-                  onClick={handleQAActivateSubscription}
+                  onClick={() => handlePay('subscription')}
                   disabled={loadingAction}
                   className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold"
                 >

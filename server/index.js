@@ -39,7 +39,12 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({
+  limit: '50mb',
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(authenticateToken);

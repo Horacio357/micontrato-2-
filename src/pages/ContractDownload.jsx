@@ -104,6 +104,31 @@ export default function ContractDownload() {
     queryClient.invalidateQueries({ queryKey: ["my-contracts"] });
   };
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get("session_id");
+    const payment = urlParams.get("payment");
+
+    if (sessionId && payment === "success") {
+      base44.functions.invoke("verifyStripePayment", { sessionId, contractId })
+        .then((res) => {
+          if (res.data?.success || res.data?.status === "paid") {
+            toast.success("¡Pago acreditado con éxito! Tu contrato ha sido desbloqueado.");
+          }
+          queryClient.invalidateQueries({ queryKey: ["contract-download", contractId] });
+          queryClient.invalidateQueries({ queryKey: ["my-contracts"] });
+          queryClient.invalidateQueries({ queryKey: ["me"] });
+          window.history.replaceState({}, document.title, window.location.pathname);
+        })
+        .catch((err) => {
+          console.warn("Error al verificar pago en retorno:", err);
+        });
+    } else if (payment === "cancelled") {
+      toast.info("El proceso de pago fue cancelado.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [contractId, queryClient]);
+
   const [showFeedback, setShowFeedback] = useState(false);
   const contractForDocx = contract ? { ...contract, generated_text: generatedText || contract.generated_text } : null;
   const { downloading: downloadingDocx, download: handleDownloadDocx } = useDocxDownload(contractId, () => setShowFeedback(true), contractForDocx);

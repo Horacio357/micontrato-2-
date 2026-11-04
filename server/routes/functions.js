@@ -6,8 +6,10 @@ import { AlignmentType, Document, Footer, PageNumber, Packer, Paragraph, TextRun
 import { prisma } from '../db.js';
 import { buildStrictContract } from '../services/contractGenerator.js';
 import { Resend } from 'resend';
+import Stripe from 'stripe';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 const router = Router();
 
@@ -382,51 +384,308 @@ async function markContractPaid(user, contractId, paymentMethod) {
 
 const QA_DISABLED_RESPONSE = { error: 'La pasarela de pago todavía no está configurada en este entorno.' };
 
-// 5. createStripeCheckout (modo QA: aprobación instantánea)
+// 5. createStripeCheckout (producción con Stripe o modo QA de respaldo)
 router.post('/createStripeCheckout', async (req, res) => {
   try {
-    if (!QA_PAYMENTS_ENABLED) return res.status(503).json(QA_DISABLED_RESPONSE);
-    const { contractId } = req.body || {};
-    const result = await markContractPaid(req.user, contractId, 'single');
-    if (!result.ok) return res.status(result.status).json({ error: result.error });
-    const origin = req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5173';
-    return res.json({ url: `${origin}/mi-cuenta/contrato/${contractId}` });
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Iniciá sesión para continuar con el pago.' });
+    const { contractId, type = 'single' } = req.body || {};
+    const origin = req.headers.origin || process.env.FRONTEND_URL || 'https://micontratos.com';
+
+    // Si Stripe está configurado con clave secreta, creamos Checkout Session real
+    if (stripe) {
+      if (type === 'subscription') {
+        const session = await stripe.checkout.sessions.create({
+          customer_email: user.email,
+          payment_method_types: ['card'],
+          mode: 'subscription',
+          line_items: [
+            {
+              price_data: {
+                currency: 'ars',
+                product_data: {
+                  name: 'miContratos - Plan Profesional Ilimitado',
+                  description: 'Descargas ilimitadas de contratos en Word/PDF, firmas digitales y certificados',
+                },
+                unit_amount: 999000, // $9.990 ARS (en centavos)
+                recurring: { interval: 'month' },
+              },
+              quantity: 1,
+            },
+          ],
+          metadata: {
+            userId: user.id,
+            userEmail: user.email,
+            type: 'subscription',
+          },
+          success_url: `${origin}/mi-cuenta?session_id={CHECKOUT_SESSION_ID}&subscription=success`,
+          cancel_url: `${origin}/mi-cuenta?subscription=cancelled`,
+        });
+        return res.json({ url: session.url });
+      }
+
+      // Pago único de un documento
+      if (!contractId) return res.status(400).json({ error: 'Falta contractId para el pago del documento.' });
+      const contract = await prisma.generatedContract.findUnique({ where: { id: contractId } });
+      if (!contract) return res.status(404).json({ error: 'Contrato no encontrado' });
+
+      // Consultamos precio de plantilla si existe en base de datos
+      let priceAmount = 4990;
+      try {
+        const tmpl = await prisma.contractTemplate.findUnique({ where: { slug: contract.template_id } });
+        if (tmpl?.price && Number(tmpl.price) > 0) priceAmount = Number(tmpl.price);
+      } catch (_) {}
+
+      const session = await stripe.checkout.sessions.create({
+        customer_email: user.email,
+        payment_method_types: ['card'],
+        mode: 'payment',
+        line_items: [
+          {
+            price_data: {
+              currency: 'ars',
+              product_data: {
+                name: `Contrato: ${contract.template_name || 'Documento Legal'}`,
+                description: 'Descarga Word (.docx) editable, PDF oficial y acceso permanente en tu cuenta',
+              },
+              unit_amount: Math.round(priceAmount * 100), // En centavos
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          contractId: contract.id,
+          userId: user.id,
+          userEmail: user.email,
+          type: 'single',
+        },
+        success_url: `${origin}/mi-cuenta/contrato/${contract.id}?session_id={CHECKOUT_SESSION_ID}&payment=success`,
+        cancel_url: `${origin}/preview/${contract.id}?payment=cancelled`,
+      });
+
+      return res.json({ url: session.url });
+    }
+
+    // Modo QA si Stripe no está activo
+    if (QA_PAYMENTS_ENABLED) {
+      if (type === 'subscription') {
+        const updatedUser = await prisma.user.update({
+          where: { id: user.id },
+          data: { subscription_status: 'active' },
+        });
+        return res.json({ success: true, url: `${origin}/mi-cuenta`, subscription_status: updatedUser.subscription_status });
+      }
+      const result = await markContractPaid(user, contractId, 'single');
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      return res.json({ url: `${origin}/mi-cuenta/contrato/${contractId}`, success: true });
+    }
+
+    return res.status(503).json(QA_DISABLED_RESPONSE);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error('Error in createStripeCheckout:', error);
+    return res.status(500).json({ error: error.message || 'Error al conectar con la pasarela de pagos Stripe' });
   }
 });
 
-// 6. verifyStripePayment (modo QA)
+// 6. verifyStripePayment (verifica sesión de Stripe Checkout y actualiza DB)
 router.post('/verifyStripePayment', async (req, res) => {
   try {
-    if (!QA_PAYMENTS_ENABLED) return res.status(503).json(QA_DISABLED_RESPONSE);
-    const { contractId } = req.body || {};
-    const result = await markContractPaid(req.user, contractId, 'single');
-    if (!result.ok) return res.status(result.status).json({ error: result.error });
-    return res.json({ success: true, status: 'paid' });
+    const user = req.user;
+    const { contractId, sessionId } = req.body || {};
+
+    if (stripe && sessionId) {
+      try {
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (session.payment_status === 'paid' || session.status === 'complete') {
+          // Si fue pago único de contrato
+          const targetContractId = session.metadata?.contractId || contractId;
+          if (targetContractId) {
+            await prisma.generatedContract.update({
+              where: { id: targetContractId },
+              data: {
+                status: 'paid',
+                payment_method: 'stripe',
+                ...(user ? { created_by_id: user.id } : {}),
+              },
+            }).catch(() => {});
+          }
+          // Si fue suscripción
+          const targetUserId = user?.id || session.metadata?.userId;
+          if (session.metadata?.type === 'subscription' && targetUserId) {
+            await prisma.user.update({
+              where: { id: targetUserId },
+              data: {
+                subscription_status: 'active',
+                stripe_customer_id: typeof session.customer === 'string' ? session.customer : session.customer?.id,
+                stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+              },
+            }).catch(() => {});
+          }
+          return res.json({ success: true, status: 'paid' });
+        }
+      } catch (err) {
+        console.warn('Verificación en Stripe falló:', err.message);
+      }
+    }
+
+    // Respaldo para QA
+    if (QA_PAYMENTS_ENABLED && contractId) {
+      const result = await markContractPaid(user, contractId, 'single');
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      return res.json({ success: true, status: 'paid' });
+    }
+
+    return res.json({ success: false, status: 'pending' });
   } catch (error) {
+    console.error('Error in verifyStripePayment:', error);
     return res.status(500).json({ error: error.message });
   }
 });
 
 // 7. syncSubscriptionStatus
 router.post('/syncSubscriptionStatus', async (req, res) => {
-  const status = req.user?.subscription_status || 'none';
+  const user = req.user;
+  if (!user) return res.json({ subscription_status: 'none', has_subscription: false });
+
+  let status = user.subscription_status || 'none';
+  let expiresAt = user.subscription_expires_at || null;
+
+  // Si tiene cliente o suscripción en Stripe, consultamos el estado real
+  if (stripe && user.stripe_subscription_id) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
+      status = sub.status === 'active' || sub.status === 'trialing' ? 'active' : sub.status;
+      expiresAt = sub.current_period_end ? new Date(sub.current_period_end * 1000) : expiresAt;
+      if (status !== user.subscription_status) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { subscription_status: status, subscription_expires_at: expiresAt },
+        });
+      }
+    } catch (e) {
+      console.warn('Error sync subscription with Stripe:', e.message);
+    }
+  }
+
   return res.json({
     subscription_status: status,
-    has_subscription: hasActiveSubscription(req.user),
-    has_customer: !!req.user?.stripe_customer_id,
-    expires_at: req.user?.subscription_expires_at || null,
+    has_subscription: status === 'active',
+    has_customer: !!user.stripe_customer_id,
+    expires_at: expiresAt,
   });
 });
 
 // 8. createStripeCustomerPortal
 router.post('/createStripeCustomerPortal', async (req, res) => {
-  const origin = req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:5173';
-  return res.json({ url: `${origin}/mi-cuenta` });
+  try {
+    const origin = req.headers.origin || process.env.FRONTEND_URL || 'https://micontratos.com';
+    const user = req.user;
+    if (stripe && user?.stripe_customer_id) {
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: user.stripe_customer_id,
+        return_url: `${origin}/mi-cuenta`,
+      });
+      return res.json({ url: portalSession.url });
+    }
+    return res.json({ url: `${origin}/mi-cuenta` });
+  } catch (err) {
+    console.error('Error in createStripeCustomerPortal:', err);
+    return res.status(500).json({ error: err.message });
+  }
 });
 
-// 9. simulatePayment (sólo QA)
+// 9. stripeWebhook (Recepción de eventos en tiempo real)
+router.post('/stripeWebhook', async (req, res) => {
+  if (!stripe) return res.status(503).send('Stripe no configurado');
+
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const signature = req.headers['stripe-signature'];
+  let event = req.body;
+
+  if (webhookSecret && signature && req.rawBody) {
+    try {
+      event = stripe.webhooks.constructEvent(req.rawBody, signature, webhookSecret);
+    } catch (err) {
+      console.error('⚠️ Webhook signature verification failed:', err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+  }
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const meta = session.metadata || {};
+        if (meta.type === 'single' && meta.contractId) {
+          await prisma.generatedContract.update({
+            where: { id: meta.contractId },
+            data: { status: 'paid', payment_method: 'stripe' },
+          }).catch(() => {});
+        }
+        if (meta.type === 'subscription' && meta.userId) {
+          await prisma.user.update({
+            where: { id: meta.userId },
+            data: {
+              subscription_status: 'active',
+              stripe_customer_id: typeof session.customer === 'string' ? session.customer : session.customer?.id,
+              stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
+            },
+          }).catch(() => {});
+        }
+        break;
+      }
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted': {
+        const sub = event.data.object;
+        const customerId = sub.customer;
+        const newStatus = sub.status === 'active' || sub.status === 'trialing' ? 'active' : sub.status;
+        const user = await prisma.user.findFirst({ where: { stripe_customer_id: customerId } });
+        if (user) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              subscription_status: newStatus,
+              subscription_expires_at: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
+            },
+          });
+        }
+        break;
+      }
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        if (invoice.customer) {
+          const user = await prisma.user.findFirst({ where: { stripe_customer_id: invoice.customer } });
+          if (user && user.subscription_status !== 'active') {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { subscription_status: 'active' },
+            });
+          }
+        }
+        break;
+      }
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        if (invoice.customer) {
+          const user = await prisma.user.findFirst({ where: { stripe_customer_id: invoice.customer } });
+          if (user) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { subscription_status: 'past_due' },
+            });
+          }
+        }
+        break;
+      }
+    }
+    return res.json({ received: true });
+  } catch (err) {
+    console.error('Error procesando webhook de Stripe:', err);
+    return res.status(500).json({ error: 'Error procesando webhook' });
+  }
+});
+
+// 10. simulatePayment (sólo QA)
 router.post('/simulatePayment', async (req, res) => {
   try {
     if (!QA_PAYMENTS_ENABLED) return res.status(403).json({ error: 'Simulación de pagos deshabilitada en producción' });
