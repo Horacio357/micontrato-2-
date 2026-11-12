@@ -47,7 +47,11 @@ export default function MisContratos() {
   const { contracts, isLoading, isError, isFetching, retry } = useAccountContracts();
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.GeneratedContract.delete(id),
+    mutationFn: async (id) => {
+      try { localStorage.removeItem(`contract_${id}`); } catch (_) {}
+      if (String(id).startsWith("local_")) return { ok: true };
+      return await base44.entities.GeneratedContract.delete(id);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-contracts"] });
       setDeletingId(null);

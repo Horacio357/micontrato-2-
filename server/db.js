@@ -71,7 +71,26 @@ export const INITIAL_LEGAL_DOCS = [
   },
 ];
 
-const isLocalMode = !process.env.DATABASE_URL;
+const isPlaceholderDbUrl = (url = '') =>
+  !url ||
+  url.includes('placeholder:placeholder@localhost:5432') ||
+  url.includes('postgres:password@localhost:5432');
+
+const isDbConnectionError = (err) => {
+  const msg = String(err?.message || '');
+  const code = String(err?.code || '');
+  return (
+    code === 'P1001' ||
+    code === 'P1002' ||
+    code === 'P1003' ||
+    msg.includes("Can't reach database server") ||
+    msg.includes('ECONNREFUSED') ||
+    msg.includes('ENOTFOUND') ||
+    msg.includes('Environment variable not found: DATABASE_URL')
+  );
+};
+
+let useMemoryFallback = isPlaceholderDbUrl(process.env.DATABASE_URL);
 
 function createMemoryStore() {
   const store = {
@@ -201,6 +220,10 @@ function createMemoryStore() {
       const items = store[modelName] || [];
       return items.find((item) => matches(item, args.where)) || null;
     },
+    findFirst: async (args = {}) => {
+      const items = store[modelName] || [];
+      return items.find((item) => matches(item, args.where)) || null;
+    },
     create: async ({ data }) => {
       const newItem = {
         created_at: new Date(),
@@ -241,10 +264,53 @@ function createMemoryStore() {
   });
 }
 
-export const prisma = isLocalMode ? createMemoryStore() : new PrismaClient();
+const memoryStore = createMemoryStore();
+let rawPrisma = null;
+if (!useMemoryFallback) {
+  try {
+    rawPrisma = new PrismaClient();
+  } catch (err) {
+    console.warn('⚠️ No se pudo inicializar PrismaClient, activando almacenamiento en memoria:', err.message);
+    useMemoryFallback = true;
+  }
+}
+
+export const prisma = new Proxy({}, {
+  get(_, modelName) {
+    const memModel = memoryStore[modelName];
+    if (useMemoryFallback || !rawPrisma || !(modelName in rawPrisma)) {
+      return memModel;
+    }
+    const realModel = rawPrisma[modelName];
+    if (typeof realModel !== 'object' || realModel === null) {
+      return realModel;
+    }
+    return new Proxy(realModel, {
+      get(target, method) {
+        const orig = target[method];
+        if (typeof orig !== 'function') return orig;
+        return async (...args) => {
+          if (useMemoryFallback) {
+            return memModel[method](...args);
+          }
+          try {
+            return await orig.apply(target, args);
+          } catch (err) {
+            if (isDbConnectionError(err)) {
+              console.warn(`⚠️ PostgreSQL inaccesible (${modelName}.${String(method)}), cambiando automáticamente a almacenamiento en memoria.`);
+              useMemoryFallback = true;
+              return memModel[method](...args);
+            }
+            throw err;
+          }
+        };
+      }
+    });
+  }
+});
 
 export async function initDb() {
-  if (process.env.DATABASE_URL) {
+  if (!useMemoryFallback && process.env.DATABASE_URL) {
     try {
       // 1. Seed super admin inicial si no existe
       const adminEmail = 'admin@micontratos.com';

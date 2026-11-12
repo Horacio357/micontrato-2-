@@ -11,7 +11,6 @@ import { getFieldConfig } from "@/hooks/useFieldFormatter";
 import { useGooglePlaces } from "@/hooks/useGooglePlaces";
 import { getFieldHelp } from "@/lib/fieldHelp";
 import FieldHelpTooltip from "./FieldHelpTooltip";
-import { Input } from "@/components/ui/input";
 import { validateDateRange } from "@/lib/contractCalculations";
 
 const MAX_DAYS_TEMPORARIA = 90;

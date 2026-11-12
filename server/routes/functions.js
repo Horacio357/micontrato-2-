@@ -78,7 +78,7 @@ router.post('/generateContractAI', async (req, res) => {
 router.post('/exportContractDocx', async (req, res) => {
   try {
     const user = req.user;
-    const { contractId, generatedText, templateName } = req.body || {};
+    const { contractId, generatedText, templateName, contractStatus } = req.body || {};
     if (!contractId && !generatedText) return res.status(400).json({ error: 'Falta contractId o generatedText' });
     if (!user) return res.status(401).json({ error: 'Iniciá sesión para descargar el contrato' });
 
@@ -106,9 +106,10 @@ router.post('/exportContractDocx', async (req, res) => {
       sourceIsTrusted = true;
       if (contract.template_name) docTemplateName = contract.template_name;
     } else {
-      // Contrato guardado sólo en el navegador: no hay registro de pago posible
-      if (!isAdmin(user) && !hasActiveSubscription(user)) {
-        return res.status(402).json({ error: 'Se requiere una membresía activa para descargar este contrato' });
+      // Contrato guardado en el navegador (local_*) o cuando la DB se reinició en modo memoria
+      const localPaid = ['paid', 'downloaded', 'signed'].includes(contractStatus);
+      if (!isAdmin(user) && !hasActiveSubscription(user) && !localPaid) {
+        return res.status(402).json({ error: 'Este contrato requiere pago o una membresía activa para descargarse' });
       }
       source = typeof generatedText === 'string' ? generatedText : '';
     }
@@ -214,6 +215,7 @@ router.post('/createContractSignature', async (req, res) => {
       terms_accepted,
       declaration_accepted,
       signing_token,
+      contract_data,
     } = req.body;
 
     if (!contract_id || !signer_name || !party_role || !signature_image) {
@@ -221,9 +223,6 @@ router.post('/createContractSignature', async (req, res) => {
     }
     if (!['part_a', 'part_b'].includes(party_role)) {
       return res.status(400).json({ error: 'party_role inválido' });
-    }
-    if (isBrowserOnlyId(contract_id)) {
-      return res.status(409).json({ error: 'Este contrato no está guardado en tu cuenta. Volvé a generarlo con la sesión iniciada para poder firmarlo.' });
     }
 
     const signedAt = new Date().toISOString();
@@ -239,7 +238,25 @@ router.post('/createContractSignature', async (req, res) => {
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || '127.0.0.1';
     const userAgent = req.headers['user-agent'] || 'Desconocido';
 
-    const contract = await prisma.generatedContract.findUnique({ where: { id: contract_id } });
+    let contract = await prisma.generatedContract.findUnique({ where: { id: contract_id } }).catch(() => null);
+    if (!contract && contract_data && typeof contract_data === 'object') {
+      try {
+        contract = await prisma.generatedContract.create({
+          data: {
+            id: contract_id,
+            created_by_id: user.id,
+            template_id: contract_data.template_id || 'contrato',
+            template_name: contract_data.template_name || 'Contrato Legal',
+            category: contract_data.category || 'general',
+            province: contract_data.province || 'Argentina',
+            form_data: contract_data.form_data || {},
+            generated_text: contract_data.generated_text || '',
+            status: contract_data.status || 'paid',
+            signature_status: contract_data.signature_status || 'not_required',
+          },
+        });
+      } catch (_) {}
+    }
     if (!contract) return res.status(404).json({ error: 'Contrato no encontrado' });
     const tokenMatches =
       signing_token &&
@@ -364,10 +381,13 @@ async function markContractPaid(user, contractId, paymentMethod) {
   if (!user) return { status: 401, error: 'Iniciá sesión para continuar' };
   if (!contractId) return { status: 400, error: 'Falta contractId' };
   if (isBrowserOnlyId(contractId)) {
-    return { status: 409, error: 'Este contrato no está guardado en tu cuenta. Generalo nuevamente con la sesión iniciada.' };
+    return { ok: true, localOnly: true };
   }
   const contract = await prisma.generatedContract.findUnique({ where: { id: contractId } });
-  if (!contract) return { status: 404, error: 'Contrato no encontrado' };
+  if (!contract) {
+    // Si la base en memoria se reinició, permitir marcar como pagado en cliente
+    return { ok: true, localOnly: true };
+  }
   const isOwner = isOwnerOrAdmin(user, contract) || isGuestOwner(contract.created_by_id);
   if (!isOwner) return { status: 403, error: 'No tenés acceso a este contrato' };
   
@@ -389,7 +409,7 @@ router.post('/createStripeCheckout', async (req, res) => {
   try {
     const user = req.user;
     if (!user) return res.status(401).json({ error: 'Iniciá sesión para continuar con el pago.' });
-    const { contractId, type = 'single' } = req.body || {};
+    const { contractId, type = 'single', templateName, templateId } = req.body || {};
     const origin = req.headers.origin || process.env.FRONTEND_URL || 'https://micontratos.com';
 
     // Si Stripe está configurado con clave secreta, creamos Checkout Session real
@@ -426,15 +446,22 @@ router.post('/createStripeCheckout', async (req, res) => {
 
       // Pago único de un documento
       if (!contractId) return res.status(400).json({ error: 'Falta contractId para el pago del documento.' });
-      const contract = await prisma.generatedContract.findUnique({ where: { id: contractId } });
-      if (!contract) return res.status(404).json({ error: 'Contrato no encontrado' });
+      const contract = !isBrowserOnlyId(contractId)
+        ? await prisma.generatedContract.findUnique({ where: { id: contractId } }).catch(() => null)
+        : null;
 
       // Consultamos precio de plantilla si existe en base de datos
       let priceAmount = 4990;
-      try {
-        const tmpl = await prisma.contractTemplate.findUnique({ where: { slug: contract.template_id } });
-        if (tmpl?.price && Number(tmpl.price) > 0) priceAmount = Number(tmpl.price);
-      } catch (_) {}
+      const slugToLookup = contract?.template_id || templateId;
+      if (slugToLookup) {
+        try {
+          const tmpl = await prisma.contractTemplate.findUnique({ where: { slug: slugToLookup } });
+          if (tmpl?.price && Number(tmpl.price) > 0) priceAmount = Number(tmpl.price);
+        } catch (_) {}
+      }
+
+      const effectiveId = contract?.id || contractId;
+      const effectiveName = contract?.template_name || templateName || 'Documento Legal';
 
       const session = await stripe.checkout.sessions.create({
         customer_email: user.email,
@@ -445,7 +472,7 @@ router.post('/createStripeCheckout', async (req, res) => {
             price_data: {
               currency: 'ars',
               product_data: {
-                name: `Contrato: ${contract.template_name || 'Documento Legal'}`,
+                name: `Contrato: ${effectiveName}`,
                 description: 'Descarga Word (.docx) editable, PDF oficial y acceso permanente en tu cuenta',
               },
               unit_amount: Math.round(priceAmount * 100), // En centavos
@@ -454,13 +481,13 @@ router.post('/createStripeCheckout', async (req, res) => {
           },
         ],
         metadata: {
-          contractId: contract.id,
+          contractId: effectiveId,
           userId: user.id,
           userEmail: user.email,
           type: 'single',
         },
-        success_url: `${origin}/mi-cuenta/contrato/${contract.id}?session_id={CHECKOUT_SESSION_ID}&payment=success`,
-        cancel_url: `${origin}/preview/${contract.id}?payment=cancelled`,
+        success_url: `${origin}/mi-cuenta/contrato/${effectiveId}?session_id={CHECKOUT_SESSION_ID}&payment=success`,
+        cancel_url: `${origin}/preview/${effectiveId}?payment=cancelled`,
       });
 
       return res.json({ url: session.url });

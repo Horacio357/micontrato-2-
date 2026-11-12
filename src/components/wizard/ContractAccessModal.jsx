@@ -71,6 +71,8 @@ export default function ContractAccessModal({
       const res = await base44.functions.invoke('createStripeCheckout', {
         contractId,
         type,
+        templateName: contract?.template_name,
+        templateId: contract?.template_id,
       });
       if (res.data?.url && res.data.url.includes('stripe.com')) {
         window.location.href = res.data.url;

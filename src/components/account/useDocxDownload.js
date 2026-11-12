@@ -11,6 +11,7 @@ export default function useDocxDownload(contractId, onDownloaded, contractData =
       if (contractData) {
         payload.generatedText = contractData.generated_text;
         payload.templateName = contractData.template_name;
+        payload.contractStatus = contractData.status;
       }
       const { data } = await base44.functions.invoke('exportContractDocx', payload);
       const bytes = Uint8Array.from(atob(data.base64), (char) => char.charCodeAt(0));

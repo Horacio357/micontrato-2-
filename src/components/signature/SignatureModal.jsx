@@ -58,6 +58,7 @@ export default function SignatureModal({ contract, onClose, onSigned }) {
         signature_image: signatureData,
         terms_accepted: termsAccepted,
         declaration_accepted: declarationAccepted,
+        contract_data: contract,
       });
 
       setStep(3);

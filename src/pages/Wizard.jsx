@@ -68,10 +68,28 @@ export default function Wizard() {
 
   useEffect(() => {
     if (!editId) return;
+    if (editId.startsWith("local_")) {
+      const item = localStorage.getItem(`contract_${editId}`);
+      if (item) {
+        const savedContract = JSON.parse(item);
+        setEditingContract(savedContract);
+        setFormData(restoreContractFormData(contrato, savedContract.form_data));
+      }
+      if (isMounted.current) setEditLoading(false);
+      return;
+    }
     base44.entities.GeneratedContract.get(editId)
       .then((savedContract) => {
         setEditingContract(savedContract);
         setFormData(restoreContractFormData(contrato, savedContract.form_data));
+      })
+      .catch(() => {
+        const item = localStorage.getItem(`contract_${editId}`);
+        if (item) {
+          const savedContract = JSON.parse(item);
+          setEditingContract(savedContract);
+          setFormData(restoreContractFormData(contrato, savedContract.form_data));
+        }
       })
       .finally(() => { if (isMounted.current) setEditLoading(false); });
   }, [editId, contrato]);

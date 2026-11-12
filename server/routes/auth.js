@@ -92,6 +92,14 @@ async function claimGuestContract(contractId, userId) {
   }
 }
 
+function formatAuthError(error) {
+  const msg = String(error?.message || '');
+  if (msg.includes('prisma.') || msg.includes('database server') || msg.includes('ECONNREFUSED')) {
+    return 'El servicio de base de datos se está reconectando. Por favor intentá de nuevo en unos segundos.';
+  }
+  return msg || 'Error al procesar la solicitud';
+}
+
 router.post('/register', async (req, res) => {
   try {
     const { email, password, name, claimContractId } = req.body;
@@ -123,7 +131,7 @@ router.post('/register', async (req, res) => {
     const { password: _, ...safeUser } = user;
     res.json({ user: safeUser, token });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: formatAuthError(error) });
   }
 });
 
@@ -157,7 +165,7 @@ router.post('/login', async (req, res) => {
     const { password: _, ...safeUser } = user;
     res.json({ user: safeUser, token });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: formatAuthError(error) });
   }
 });
 
