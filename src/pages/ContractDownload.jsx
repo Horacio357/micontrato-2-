@@ -21,6 +21,7 @@ import ContractAccessModal from "@/components/wizard/ContractAccessModal";
 import useDocxDownload from "@/components/account/useDocxDownload";
 import { useAuth } from "@/lib/AuthContext";
 import { parseContractText } from "@/lib/contractParser";
+import { useDynamicContracts } from "@/hooks/useDynamicContracts";
 
 const sigStatusMap = {
   not_required: null,
@@ -34,6 +35,7 @@ export default function ContractDownload() {
   const { contractId } = useParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { contracts: dynamicContracts } = useDynamicContracts();
   const [showSignModal, setShowSignModal] = useState(false);
   const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
@@ -206,6 +208,12 @@ export default function ContractDownload() {
   const canSignA = !partASignature;
   const canSignB = !partBSignature;
 
+  const matchedTemplate = dynamicContracts.find(
+    (t) => t.slug === contract?.template_id || t.id === contract?.template_id
+  );
+  const singlePrice = Number(matchedTemplate?.price) > 0 ? Number(matchedTemplate.price) : 4990;
+  const formattedPrice = singlePrice.toLocaleString('es-AR');
+
   return (
     <div className="min-h-screen bg-slate-100/70 print:bg-white">
       <div className="print:hidden">
@@ -255,7 +263,7 @@ export default function ContractDownload() {
               <div>
                 <p className="text-sm font-semibold text-amber-900">Documento pendiente de activación</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Adquirí este documento único ($4.990) o activá tu membresía profesional para descargar Word/PDF y firmar.
+                  Adquirí este documento único (${formattedPrice}) o activá tu membresía profesional para descargar Word/PDF y firmar.
                 </p>
               </div>
             </div>

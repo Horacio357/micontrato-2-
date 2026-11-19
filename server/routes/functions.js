@@ -450,12 +450,19 @@ router.post('/createStripeCheckout', async (req, res) => {
         ? await prisma.generatedContract.findUnique({ where: { id: contractId } }).catch(() => null)
         : null;
 
-      // Consultamos precio de plantilla si existe en base de datos
+      // Consultamos precio dinámico de plantilla configurado por el administrador
       let priceAmount = 4990;
       const slugToLookup = contract?.template_id || templateId;
       if (slugToLookup) {
         try {
-          const tmpl = await prisma.contractTemplate.findUnique({ where: { slug: slugToLookup } });
+          const tmpl = await prisma.contractTemplate.findFirst({
+            where: {
+              OR: [
+                { slug: slugToLookup },
+                { id: slugToLookup },
+              ],
+            },
+          });
           if (tmpl?.price && Number(tmpl.price) > 0) priceAmount = Number(tmpl.price);
         } catch (_) {}
       }

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
+import { useDynamicContracts } from '@/hooks/useDynamicContracts';
 import {
   Lock,
   CheckCircle2,
@@ -35,6 +36,7 @@ export default function ContractAccessModal({
   const { user, isAuthenticated, checkUserAuth } = useAuth();
   const navigate = useNavigate();
   const [loadingAction, setLoadingAction] = useState(false);
+  const { contracts: dynamicContracts } = useDynamicContracts();
 
   const contractId = contract?.id;
   const isContractPaid = contract?.status === 'paid' || contract?.status === 'downloaded' || contract?.status === 'signed';
@@ -44,6 +46,13 @@ export default function ContractAccessModal({
     import.meta.env.VITE_ENABLE_QA_PAYMENTS === 'true' ||
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1';
+
+  // Buscar el precio dinámico configurado en la base de datos para esta plantilla
+  const matchedTemplate = dynamicContracts.find(
+    (t) => t.slug === contract?.template_id || t.id === contract?.template_id
+  );
+  const singlePrice = Number(matchedTemplate?.price) > 0 ? Number(matchedTemplate.price) : 4990;
+  const formattedPrice = singlePrice.toLocaleString('es-AR');
 
   // 1. Fast QA 1-click login handler
   const handleQALogin = async (email, password) => {
@@ -289,7 +298,7 @@ export default function ContractAccessModal({
                   </div>
                   <h3 className="text-lg font-bold text-foreground">Documento Único</h3>
                   <div className="mt-2 mb-3">
-                    <span className="text-2xl font-extrabold text-foreground">$4.990</span>
+                    <span className="text-2xl font-extrabold text-foreground">${formattedPrice}</span>
                     <span className="text-xs text-muted-foreground ml-1">ARS</span>
                   </div>
                   <ul className="text-xs text-slate-600 space-y-1.5 mb-4">
@@ -315,7 +324,7 @@ export default function ContractAccessModal({
                   className="w-full font-semibold border-slate-300 hover:bg-slate-50"
                 >
                   <CreditCard className="w-3.5 h-3.5 mr-1.5 text-slate-700" />
-                  Pagar solo este documento
+                  Pagar solo este documento (${formattedPrice})
                 </Button>
               </div>
 
@@ -384,7 +393,7 @@ export default function ContractAccessModal({
                     className="w-full justify-center text-xs bg-white hover:bg-slate-100 font-medium text-slate-800 border-slate-300"
                   >
                     {loadingAction ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Zap className="w-3.5 h-3.5 text-amber-600 mr-1.5" />}
-                    ⚡ Simular Pago Documento ($4.990)
+                    ⚡ Simular Pago Documento (${formattedPrice})
                   </Button>
 
                   <Button
