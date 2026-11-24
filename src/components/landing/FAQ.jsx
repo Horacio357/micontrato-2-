@@ -4,9 +4,9 @@ const faqs = [
   { q: "¿Los contratos tienen validez legal?", a: "Sí. Todos los contratos están redactados conforme a la legislación argentina vigente y se adaptan a las normativas de cada provincia. Son documentos privados válidos, listos para firmar." },
   { q: "¿Necesito un abogado para usar micontrato?", a: "No. El formulario guiado te explica cada campo en lenguaje simple. Si tenés dudas, nuestro asistente IA te ayuda en tiempo real. Igualmente, siempre recomendamos consulta profesional para contratos complejos." },
   { q: "¿En qué formatos puedo descargar el contrato?", a: "PDF listo para imprimir y firmar, y Word editable por si necesitás hacer ajustes con tu abogado." },
-  { q: "¿Qué provincias están disponibles?", a: "En la primera versión soportamos CABA, Buenos Aires, Córdoba y Santa Fe. Estamos trabajando para agregar más provincias pronto." },
+  { q: "¿Qué provincias están disponibles?", a: "Cubrimos las 24 jurisdicciones de la República Argentina (CABA y todas las provincias), adaptando cada contrato a las normas locales aplicables." },
   { q: "¿Puedo editar el contrato después de descargarlo?", a: "Sí, la versión Word es completamente editable. El PDF viene listo para imprimir y firmar directamente." },
-  { q: "¿Qué métodos de pago aceptan?", a: "Aceptamos MercadoPago (tarjeta, transferencia, débito) y tarjetas internacionales." },
+  { q: "¿Qué métodos de pago aceptan?", a: "Aceptamos tarjetas de crédito y débito nacionales e internacionales de forma segura a través de Stripe, tanto por documento único como por suscripción mensual." },
 ];
 
 export default function FAQ() {

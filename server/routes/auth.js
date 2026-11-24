@@ -21,9 +21,16 @@ export function isSuperAdminEmail(email = '') {
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
-  const defaultAdmins = ['admin@micontratos.com', 'admin@micontrato.com.ar'];
-  return configuredAdmins.includes(normalized) || defaultAdmins.includes(normalized);
+  if (process.env.NODE_ENV !== 'production') {
+    return configuredAdmins.includes(normalized) || ['admin@micontratos.com', 'admin@micontrato.com.ar'].includes(normalized);
+  }
+  return configuredAdmins.includes(normalized);
 }
+
+const isProductionStrict = () =>
+  process.env.NODE_ENV === 'production' && process.env.ENABLE_QA_PAYMENTS !== 'true';
+
+const QA_DEMO_EMAILS = ['demo@micontrato.com.ar', 'sinpago@micontrato.com.ar'];
 
 export function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -110,18 +117,22 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     }
     const normalizedEmail = email.toLowerCase().trim();
+    if (isSuperAdminEmail(normalizedEmail)) {
+      return res.status(403).json({
+        error: 'Este correo está reservado para administración. Configurá ADMIN_INITIAL_PASSWORD en el servidor o iniciá sesión.',
+      });
+    }
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return res.status(400).json({ error: 'El email ya está registrado' });
     }
-    const role = isSuperAdminEmail(normalizedEmail) ? 'admin' : 'user';
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
         email: normalizedEmail,
         password: hashedPassword,
         name: name || normalizedEmail.split('@')[0],
-        role,
+        role: 'user',
       },
     });
 
@@ -142,6 +153,9 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
     }
     const normalizedEmail = email.toLowerCase().trim();
+    if (isProductionStrict() && QA_DEMO_EMAILS.includes(normalizedEmail)) {
+      return res.status(403).json({ error: 'Las cuentas de prueba QA están deshabilitadas en producción.' });
+    }
     let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
       return res.status(400).json({ error: 'Credenciales inválidas' });
@@ -150,8 +164,13 @@ router.post('/login', async (req, res) => {
     if (!valid) {
       return res.status(400).json({ error: 'Credenciales inválidas' });
     }
+    if (isProductionStrict() && normalizedEmail === 'admin@micontratos.com' && password === 'admin123') {
+      return res.status(403).json({
+        error: 'Contraseña por defecto bloqueada en producción. Configurá ADMIN_INITIAL_PASSWORD en Railway.',
+      });
+    }
 
-    // Auto-promover a admin si su email está en la lista de super administradores
+    // Auto-promover si su email está en SUPER_ADMIN_EMAILS (no registrable públicamente)
     if (user.role !== 'admin' && isSuperAdminEmail(normalizedEmail)) {
       user = await prisma.user.update({
         where: { id: user.id },

@@ -12,12 +12,21 @@ export default function AdminDashboard() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: templates = [] } = useQuery({
+    queryKey: ["admin-dashboard-templates"],
+    queryFn: () => base44.entities.ContractTemplate.list("name", 200),
+    staleTime: 60_000,
+  });
+
+  const priceBySlug = Object.fromEntries(templates.map((t) => [t.slug, Number(t.price) || 4990]));
+  const isPaidStatus = (s) => s === "paid" || s === "downloaded" || s === "signed";
+
   const total = contracts.length;
-  const paid = contracts.filter((c) => c.status === "paid" || c.status === "downloaded").length;
-  const downloaded = contracts.filter((c) => c.status === "downloaded").length;
+  const paid = contracts.filter((c) => isPaidStatus(c.status)).length;
+  const downloaded = contracts.filter((c) => c.status === "downloaded" || c.status === "signed").length;
   const revenue = contracts
-    .filter((c) => c.status === "paid" || c.status === "downloaded")
-    .reduce((sum, c) => sum + (c.price || 4990), 0);
+    .filter((c) => isPaidStatus(c.status))
+    .reduce((sum, c) => sum + (c.price || priceBySlug[c.template_id] || 4990), 0);
 
   // Contracts per day (last 7 days)
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -130,16 +139,16 @@ export default function AdminDashboard() {
             <div key={c.id} className="px-6 py-3 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-foreground">{c.template_name}</p>
-                <p className="text-xs text-muted-foreground">{c.province} · {new Date(c.created_date).toLocaleDateString("es-AR")}</p>
+                <p className="text-xs text-muted-foreground">{c.province} · {new Date(c.created_at || c.created_date).toLocaleDateString("es-AR")}</p>
               </div>
               <span className={`text-xs px-2 py-0.5 border ${
-                c.status === "paid" || c.status === "downloaded"
+                isPaidStatus(c.status)
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                   : c.status === "pending_payment"
                   ? "bg-amber-50 text-amber-700 border-amber-200"
                   : "bg-muted text-muted-foreground border-border"
               }`}>
-                {c.status === "paid" ? "Pagado" : c.status === "downloaded" ? "Descargado" : c.status === "pending_payment" ? "Pendiente" : "Borrador"}
+                {c.status === "signed" ? "Firmado" : c.status === "paid" ? "Pagado" : c.status === "downloaded" ? "Descargado" : c.status === "pending_payment" ? "Pendiente" : "Borrador"}
               </span>
             </div>
           ))}

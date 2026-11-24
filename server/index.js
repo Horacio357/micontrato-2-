@@ -49,6 +49,40 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.disable('x-powered-by');
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+function createRateLimiter(maxRequests, windowMs) {
+  const hits = new Map();
+  return (req, res, next) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
+    const now = Date.now();
+    const record = hits.get(ip);
+    if (!record || record.expiresAt <= now) {
+      hits.set(ip, { count: 1, expiresAt: now + windowMs });
+      if (hits.size > 5000) {
+        for (const [k, v] of hits) {
+          if (v.expiresAt <= now) hits.delete(k);
+        }
+      }
+      return next();
+    }
+    record.count += 1;
+    if (record.count > maxRequests) {
+      return res.status(429).json({ error: 'Demasiadas solicitudes. Esperá un minuto e intentá nuevamente.' });
+    }
+    return next();
+  };
+}
+
+const authLimiter = createRateLimiter(25, 60_000);
+const chatLimiter = createRateLimiter(30, 60_000);
+
 app.use(express.json({
   limit: '50mb',
   verify: (req, _res, buf) => {
@@ -65,11 +99,13 @@ app.get('/api/health', (req, res) => {
 });
 
 // API routes
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 app.use('/api/auth', authRouter);
 app.use('/api/entities', entitiesRouter);
 app.use('/api/functions', functionsRouter);
 app.use('/api/upload', uploadRouter);
-app.use('/api/chat', chatRouter);
+app.use('/api/chat', chatLimiter, chatRouter);
 
 // Static uploaded files
 const uploadsPath = [

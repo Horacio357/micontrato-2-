@@ -193,7 +193,10 @@ export default function Login() {
           </form>
 
           {/* Opciones rápidas de QA para pruebas y evaluación */}
-          {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_QA_PAYMENTS === 'true' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+          {import.meta.env.VITE_ENABLE_QA_PAYMENTS !== 'false' &&
+            (import.meta.env.VITE_ENABLE_QA_PAYMENTS === 'true' ||
+              (import.meta.env.DEV &&
+                (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))) && (
             <div className="mt-6 pt-5 border-t border-border space-y-2">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground text-center">
                 Accesos Rápidos de Prueba (QA / Evaluación)

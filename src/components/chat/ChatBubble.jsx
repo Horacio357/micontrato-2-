@@ -37,23 +37,30 @@ export default function ChatBubble() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || sending) return;
+    if (!input.trim() || sending || !conversation) return;
     setSending(true);
     const msg = input;
     setInput("");
 
-    // Optimistic update
-    setMessages((prev) => [...prev, { role: "user", content: msg }]);
-
-    await base44.agents.addMessage(conversation, { role: "user", content: msg });
-
-    // Subscribe if not already
+    // Subscribe before dispatching message so the first reply is never missed
     if (!subscribed) {
       setSubscribed(true);
       base44.agents.subscribeToConversation(conversation.id, (data) => {
-        setMessages(data.messages || []);
+        setMessages([...(data.messages || [])]);
         setSending(false);
       });
+    }
+
+    // Optimistic update
+    setMessages((prev) => [...prev, { role: "user", content: msg }]);
+
+    try {
+      const updated = await base44.agents.addMessage(conversation, { role: "user", content: msg });
+      if (updated?.messages) {
+        setMessages([...updated.messages]);
+      }
+    } finally {
+      setSending(false);
     }
   };
 

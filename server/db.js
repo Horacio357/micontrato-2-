@@ -53,21 +53,83 @@ export const INITIAL_TEMPLATES = [
   },
 ];
 
+export const LEGACY_LEGAL_STUBS = {
+  tos: "Términos y condiciones de uso de micontratos.com de acuerdo a la legislación vigente de la República Argentina y normas de contratación electrónica del Código Civil y Comercial de la Nación.",
+  privacy: "Política de privacidad de micontratos.com conforme a la Ley N° 25.326 de Protección de los Datos Personales de la República Argentina.",
+  disclaimer: "Aviso legal y delimitación de responsabilidad de micontratos.com para instrumentos y modelos jurídicos emitidos.",
+};
+
 export const INITIAL_LEGAL_DOCS = [
   {
     document_type: "tos",
     title: "Términos y Condiciones de Uso",
-    content: "Términos y condiciones de uso de micontratos.com de acuerdo a la legislación vigente de la República Argentina y normas de contratación electrónica del Código Civil y Comercial de la Nación.",
+    content: `### 1. Aceptación de los Términos
+Al acceder, navegar o utilizar la plataforma micontratos.com ("la Plataforma"), usted ("el Usuario") declara que ha leído, comprendido y acepta en su totalidad los presentes Términos y Condiciones, así como nuestra Política de Privacidad. Si no está de acuerdo con alguna de las cláusulas, deberá abstenerse de utilizar el servicio.
+
+### 2. Objeto y Naturaleza del Servicio
+micontratos.com es una plataforma tecnológica SaaS diseñada para automatizar la redacción, personalización y suscripción electrónica de modelos contractuales conforme a la legislación vigente de la República Argentina (incluyendo el Código Civil y Comercial de la Nación, Ley de Locaciones y normas complementarias como el DNU 70/2023).
+
+La Plataforma provee herramientas tecnológicas y plantillas estandarizadas. El uso de la Plataforma no constituye asesoramiento letrado personalizado ni patrocinio jurídico profesional. En caso de requerir dictamen legal sobre situaciones complejas o litigiosas, se recomienda la consulta con un abogado matriculado.
+
+### 3. Validez Legal y Firma Electrónica
+Los contratos celebrados a través de micontratos.com se formalizan mediante mecanismos de firma electrónica de acuerdo con el Artículo 288 del Código Civil y Comercial de la Nación y la Ley N° 25.506 de Firma Digital y Firma Electrónica.
+La Plataforma registra e incorpora al documento generado:
+- Identificación de las partes (nombre, apellido, DNI/CUIT y correo electrónico).
+- Constancia de aceptación expresa de términos y declaraciones juradas.
+- Trazabilidad técnica: dirección IP de origen, fecha y hora exacta (timestamp UTC) y hash criptográfico SHA-256 único e inalterable del instrumento.
+
+### 4. Responsabilidad por los Datos Ingresados
+El Usuario es el único y exclusivo responsable de la exactitud, veracidad y legalidad de toda la información suministrada en los formularios de confección del contrato. micontratos.com no verifica de oficio la titularidad de bienes ni la veracidad de los datos personales declarados por los firmantes.
+
+### 5. Precios, Pagos y Facturación
+El acceso a la descarga y suscripción de contratos definitivos está sujeto a los valores vigentes publicados en la Plataforma en Pesos Argentinos (ARS). Los pagos son procesados a través de pasarelas de pago seguras homologadas. Debido a que el servicio provee acceso inmediato a la descarga de documentación digital con valor legal, no se admiten reembolsos una vez generado y firmado el documento, salvo fallas técnicas atribuibles exclusivamente al sistema que imposibiliten la descarga.
+
+### 6. Propiedad Intelectual
+Todos los derechos de propiedad intelectual respecto del software, diseño, arquitectura, marcas, logotipos y plantillas de micontratos.com son propiedad exclusiva de sus respectivos titulares. Queda prohibida la reproducción, reventa o distribución no autorizada de la plataforma.
+
+### 7. Ley Aplicable y Jurisdicción
+Los presentes Términos y Condiciones se regirán e interpretarán de acuerdo con las leyes de la República Argentina. Ante cualquier controversia, las partes se someten a la competencia de los Tribunales Ordinarios competentes, renunciando a cualquier otro fuero que pudiera corresponderles.
+
+Para consultas legales o administrativas, contáctenos en: admin@micontratos.com`,
   },
   {
     document_type: "privacy",
     title: "Política de Privacidad y Protección de Datos",
-    content: "Política de privacidad de micontratos.com conforme a la Ley N° 25.326 de Protección de los Datos Personales de la República Argentina.",
+    content: `### 1. Compromiso de Confidencialidad
+En micontratos.com la privacidad y protección de los datos personales de nuestros usuarios y firmantes constituyen un pilar fundamental. Tratamos toda la información con estricto apego a la Ley de Protección de los Datos Personales de la República Argentina (Ley N° 25.326), su Decreto Reglamentario N° 1558/2001 y demás normas concordantes.
+
+### 2. Información que Recopilamos
+Para la prestación adecuada del servicio y la formalización de contratos con validez legal, recopilamos:
+- **Datos de identificación**: Nombres, apellidos, tipo y número de documento (DNI, CUIT/CUIL), domicilio legal y estado civil de los contratantes.
+- **Datos de contacto**: Dirección de correo electrónico y teléfono de contacto.
+- **Datos del contrato**: Direcciones de inmuebles, montos pactados, plazos de locación o prestación y cláusulas particulares seleccionadas.
+- **Datos técnicos de auditoría de firma**: Dirección IP, user-agent del navegador web, coordenadas de geolocalización aproximada (cuando el usuario lo consiente) y trazado digitalizado de la firma manuscrita.
+
+### 3. Finalidad del Tratamiento de Datos
+Los datos personales recabados son utilizados única y exclusivamente para:
+1. Confeccionar, generar y almacenar el instrumento contractual solicitado.
+2. Permitir la firma electrónica de ambas partes (Locador/Locatario, Prestador/Cliente, etc.).
+3. Enviar notificaciones indispensables relativas al estado del contrato y copias descargables en PDF/DOCX.
+4. Generar el certificado de auditoría técnica que respalda la validez de la firma.
+
+### 4. Prohibición de Comercialización a Terceros
+micontratos.com jamás vende, cede, alquila ni comercializa las bases de datos de sus usuarios o el contenido de los contratos a terceras entidades con fines publicitarios ni de ninguna otra índole.
+
+### 5. Medidas de Seguridad y Cifrado
+Implementamos rigurosas medidas técnicas y organizativas para resguardar la integridad y confidencialidad de la información:
+- Tráfico web 100% cifrado mediante protocolo HTTPS / TLS.
+- Almacenamiento seguro en servidores con bases de datos relacionales protegidas y respaldos periódicos.
+- Tokens criptográficos únicos e intransferibles para los enlaces de firma de cada parte contratante.
+
+### 6. Ejercicio de Derechos ARCO (Acceso, Rectificación y Cancelación)
+De conformidad con el Artículo 14 de la Ley 25.326, el titular de los datos personales tiene la facultad de ejercer el derecho de acceso a los mismos en forma gratuita a intervalos no inferiores a seis meses. Asimismo, podrá solicitar la rectificación, actualización o supresión de sus datos enviando un correo a **admin@micontratos.com**.
+
+La AGENCIA DE ACCESO A LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que se interpongan con relación al incumplimiento de las normas sobre protección de datos personales.`,
   },
   {
     document_type: "disclaimer",
     title: "Aviso Legal",
-    content: "Aviso legal y delimitación de responsabilidad de micontratos.com para instrumentos y modelos jurídicos emitidos.",
+    content: "micontratos.com provee modelos contractuales estandarizados y automatizados conformes a la legislación vigente de la República Argentina. El uso de la plataforma no sustituye el asesoramiento letrado particular en situaciones jurídicas complejas o litigiosas.",
   },
 ];
 
@@ -312,52 +374,99 @@ export const prisma = new Proxy({}, {
 export async function initDb() {
   if (!useMemoryFallback && process.env.DATABASE_URL) {
     try {
-      // 1. Seed super admin inicial si no existe
-      const adminEmail = 'admin@micontratos.com';
-      const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
-      if (!existingAdmin) {
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        await prisma.user.create({
-          data: {
-            email: adminEmail,
-            name: 'Super Administrador miContratos',
-            password: hashedPassword,
-            role: 'admin',
-            subscription_status: 'active',
-          },
-        });
-        console.log(`✅ Super Administrador inicial creado: ${adminEmail}`);
-      }
+      const isProductionStrict =
+        process.env.NODE_ENV === 'production' && process.env.ENABLE_QA_PAYMENTS !== 'true';
 
-      // Seed usuarios de prueba QA si no existen
-      const existingDemo = await prisma.user.findUnique({ where: { email: 'demo@micontrato.com.ar' } });
-      if (!existingDemo) {
-        const demoPass = await bcrypt.hash('123456', 10);
-        await prisma.user.create({
-          data: {
-            email: 'demo@micontrato.com.ar',
-            name: 'Usuario Profesional Demo (QA)',
-            password: demoPass,
-            role: 'user',
-            subscription_status: 'active',
-          },
-        });
-        console.log('✅ Usuario demo QA con membresía creado: demo@micontrato.com.ar');
-      }
+      // 1. Administración segura en producción vs. semillas de QA en desarrollo
+      if (isProductionStrict) {
+        const configuredAdminEmail = (
+          process.env.ADMIN_EMAIL ||
+          (process.env.SUPER_ADMIN_EMAILS || '').split(',')[0] ||
+          'admin@micontratos.com'
+        ).trim().toLowerCase();
 
-      const existingSinPago = await prisma.user.findUnique({ where: { email: 'sinpago@micontrato.com.ar' } });
-      if (!existingSinPago) {
-        const sinPagoPass = await bcrypt.hash('123456', 10);
-        await prisma.user.create({
-          data: {
-            email: 'sinpago@micontrato.com.ar',
-            name: 'Usuario Nuevo Sin Pago (QA)',
-            password: sinPagoPass,
-            role: 'user',
-            subscription_status: 'none',
-          },
-        });
-        console.log('✅ Usuario sin pago QA creado: sinpago@micontrato.com.ar');
+        if (process.env.ADMIN_INITIAL_PASSWORD && configuredAdminEmail) {
+          const hashedPassword = await bcrypt.hash(process.env.ADMIN_INITIAL_PASSWORD, 10);
+          const existing = await prisma.user.findUnique({ where: { email: configuredAdminEmail } });
+          if (!existing) {
+            await prisma.user.create({
+              data: {
+                email: configuredAdminEmail,
+                name: 'Administrador miContratos',
+                password: hashedPassword,
+                role: 'admin',
+                subscription_status: 'active',
+              },
+            });
+            console.log(`✅ Administrador de producción creado: ${configuredAdminEmail}`);
+          } else if (existing.role !== 'admin') {
+            await prisma.user.update({
+              where: { id: existing.id },
+              data: { role: 'admin', password: hashedPassword },
+            });
+          } else if (configuredAdminEmail === 'admin@micontratos.com' && (await bcrypt.compare('admin123', existing.password))) {
+            await prisma.user.update({
+              where: { id: existing.id },
+              data: { password: hashedPassword },
+            });
+            console.log('✅ Contraseña por defecto del administrador actualizada desde ADMIN_INITIAL_PASSWORD.');
+          }
+        }
+
+        // Revocar membresía gratuita de demo QA si existiera de despliegues previos
+        const existingDemo = await prisma.user.findUnique({ where: { email: 'demo@micontrato.com.ar' } });
+        if (existingDemo && existingDemo.subscription_status === 'active') {
+          await prisma.user.update({
+            where: { id: existingDemo.id },
+            data: { subscription_status: 'none' },
+          });
+        }
+      } else {
+        const adminEmail = 'admin@micontratos.com';
+        const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+        if (!existingAdmin) {
+          const hashedPassword = await bcrypt.hash('admin123', 10);
+          await prisma.user.create({
+            data: {
+              email: adminEmail,
+              name: 'Super Administrador miContratos',
+              password: hashedPassword,
+              role: 'admin',
+              subscription_status: 'active',
+            },
+          });
+          console.log(`✅ Super Administrador inicial creado: ${adminEmail}`);
+        }
+
+        const existingDemo = await prisma.user.findUnique({ where: { email: 'demo@micontrato.com.ar' } });
+        if (!existingDemo) {
+          const demoPass = await bcrypt.hash('123456', 10);
+          await prisma.user.create({
+            data: {
+              email: 'demo@micontrato.com.ar',
+              name: 'Usuario Profesional Demo (QA)',
+              password: demoPass,
+              role: 'user',
+              subscription_status: 'active',
+            },
+          });
+          console.log('✅ Usuario demo QA con membresía creado: demo@micontrato.com.ar');
+        }
+
+        const existingSinPago = await prisma.user.findUnique({ where: { email: 'sinpago@micontrato.com.ar' } });
+        if (!existingSinPago) {
+          const sinPagoPass = await bcrypt.hash('123456', 10);
+          await prisma.user.create({
+            data: {
+              email: 'sinpago@micontrato.com.ar',
+              name: 'Usuario Nuevo Sin Pago (QA)',
+              password: sinPagoPass,
+              role: 'user',
+              subscription_status: 'none',
+            },
+          });
+          console.log('✅ Usuario sin pago QA creado: sinpago@micontrato.com.ar');
+        }
       }
 
       // 2. Seed de plantillas base si la tabla está vacía
@@ -369,13 +478,25 @@ export async function initDb() {
         console.log(`✅ ${INITIAL_TEMPLATES.length} plantillas base registradas en PostgreSQL.`);
       }
 
-      // 3. Seed de documentos legales base si la tabla está vacía
-      const currentDocs = await prisma.legalDocument.findMany({ take: 1 });
+      // 3. Seed o actualización de textos placeholder en documentos legales
+      const currentDocs = await prisma.legalDocument.findMany();
       if (currentDocs.length === 0) {
         for (const d of INITIAL_LEGAL_DOCS) {
           await prisma.legalDocument.create({ data: d });
         }
         console.log(`✅ ${INITIAL_LEGAL_DOCS.length} documentos legales base registrados en PostgreSQL.`);
+      } else {
+        for (const d of INITIAL_LEGAL_DOCS) {
+          const existingDoc = currentDocs.find((c) => c.document_type === d.document_type);
+          if (!existingDoc) {
+            await prisma.legalDocument.create({ data: d });
+          } else if (existingDoc.content?.trim() === LEGACY_LEGAL_STUBS[d.document_type]) {
+            await prisma.legalDocument.update({
+              where: { id: existingDoc.id },
+              data: { title: d.title, content: d.content },
+            });
+          }
+        }
       }
       console.log('✅ Base de datos PostgreSQL conectada y sincronizada.');
     } catch (err) {

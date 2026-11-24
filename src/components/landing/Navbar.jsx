@@ -23,7 +23,7 @@ export default function Navbar() {
             <a href="/#contratos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Contratos
             </a>
-            <a href="/#precios" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="/#contratos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Precios
             </a>
             <a href="/#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -60,7 +60,7 @@ export default function Navbar() {
             <div className="px-4 py-4 space-y-3">
               <a href="/#como-funciona" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Cómo funciona</a>
               <a href="/#contratos" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Contratos</a>
-              <a href="/#precios" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Precios</a>
+              <a href="/#contratos" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>Precios</a>
               <a href="/#faq" className="block text-sm text-muted-foreground" onClick={() => setOpen(false)}>FAQ</a>
               <div className="pt-3 border-t border-border space-y-2">
                 <Link to="/mi-cuenta" onClick={() => setOpen(false)}><Button variant="ghost" size="sm" className="w-full">Mi cuenta</Button></Link>

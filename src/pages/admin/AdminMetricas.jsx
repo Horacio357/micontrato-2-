@@ -12,11 +12,13 @@ export default function AdminMetricas() {
     queryFn: () => base44.entities.GeneratedContract.list("-created_at", 500),
   });
 
+  const isPaidStatus = (s) => s === "paid" || s === "downloaded" || s === "signed";
+
   // By contract type
   const byType = CONTRACTS.map((ct) => ({
     name: ct.name.replace("Contrato de ", "").replace("Acuerdo de ", ""),
-    total: contracts.filter((c) => c.template_name === ct.name).length,
-    pagados: contracts.filter((c) => c.template_name === ct.name && (c.status === "paid" || c.status === "downloaded")).length,
+    total: contracts.filter((c) => c.template_id === ct.slug || c.template_name === ct.name).length,
+    pagados: contracts.filter((c) => (c.template_id === ct.slug || c.template_name === ct.name) && isPaidStatus(c.status)).length,
   })).filter((x) => x.total > 0);
 
   // By category pie
@@ -25,15 +27,23 @@ export default function AdminMetricas() {
     value: contracts.filter((c) => c.category === cat).length,
   }));
 
-  // By province
-  const byProvince = ["CABA", "Buenos Aires", "Córdoba", "Santa Fe"].map((p) => ({
-    name: p,
-    value: contracts.filter((c) => c.province === p).length,
+  // By province (contracts store slugs like 'caba', 'buenos-aires', 'cordoba', 'santa-fe')
+  const provinceEntries = [
+    { slug: "caba", name: "CABA" },
+    { slug: "buenos-aires", name: "Buenos Aires" },
+    { slug: "cordoba", name: "Córdoba" },
+    { slug: "santa-fe", name: "Santa Fe" },
+  ];
+  const byProvince = provinceEntries.map((p) => ({
+    name: p.name,
+    value: contracts.filter(
+      (c) => c.province === p.slug || c.province?.toLowerCase() === p.name.toLowerCase()
+    ).length,
   }));
 
   // Conversion rate
   const total = contracts.length;
-  const paid = contracts.filter((c) => c.status === "paid" || c.status === "downloaded").length;
+  const paid = contracts.filter((c) => isPaidStatus(c.status)).length;
   const convRate = total ? ((paid / total) * 100).toFixed(1) : 0;
 
   // Last 30 days by day
@@ -45,7 +55,7 @@ export default function AdminMetricas() {
   const dailyData = days30.map((date) => ({
     date: date.slice(5),
     generados: contracts.filter((c) => c.created_at?.slice(0, 10) === date).length,
-    pagados: contracts.filter((c) => c.created_at?.slice(0, 10) === date && (c.status === "paid" || c.status === "downloaded")).length,
+    pagados: contracts.filter((c) => c.created_at?.slice(0, 10) === date && isPaidStatus(c.status)).length,
   }));
 
   return (
@@ -61,7 +71,7 @@ export default function AdminMetricas() {
           { label: "Total generados", value: total },
           { label: "Pagados", value: paid },
           { label: "Conversión", value: `${convRate}%` },
-          { label: "Descargas", value: contracts.filter((c) => c.status === "downloaded").length },
+          { label: "Descargas", value: contracts.filter((c) => c.status === "downloaded" || c.status === "signed").length },
         ].map((k) => (
           <Card key={k.label} className="p-5 border border-border">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">{k.label}</p>

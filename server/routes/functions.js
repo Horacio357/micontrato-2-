@@ -13,9 +13,9 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 
 const router = Router();
 
-// Pagos simulados (QA): activos por defecto para evaluación hasta integrar Stripe en producción
+// Pagos simulados (QA): deshabilitados en producción; sólo activos si se habilitan explícitamente fuera de producción
 const QA_PAYMENTS_ENABLED =
-  process.env.NODE_ENV !== 'production' || process.env.ENABLE_QA_PAYMENTS !== 'false';
+  process.env.ENABLE_QA_PAYMENTS === 'true' && process.env.NODE_ENV !== 'production';
 
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
@@ -54,7 +54,7 @@ async function readUploadedFile(source) {
 // 1. generateContractAI
 router.post('/generateContractAI', async (req, res) => {
   try {
-    const { contractSlug, province, formData, preview = false } = req.body;
+    const { contractSlug, province, formData } = req.body;
     if (!contractSlug || !province || !formData) {
       return res.status(400).json({ error: "Faltan datos requeridos: contractSlug, province, formData" });
     }
@@ -78,7 +78,7 @@ router.post('/generateContractAI', async (req, res) => {
 router.post('/exportContractDocx', async (req, res) => {
   try {
     const user = req.user;
-    const { contractId, generatedText, templateName, contractStatus } = req.body || {};
+    const { contractId, generatedText, templateName } = req.body || {};
     if (!contractId && !generatedText) return res.status(400).json({ error: 'Falta contractId o generatedText' });
     if (!user) return res.status(401).json({ error: 'Iniciá sesión para descargar el contrato' });
 
@@ -106,9 +106,8 @@ router.post('/exportContractDocx', async (req, res) => {
       sourceIsTrusted = true;
       if (contract.template_name) docTemplateName = contract.template_name;
     } else {
-      // Contrato guardado en el navegador (local_*) o cuando la DB se reinició en modo memoria
-      const localPaid = ['paid', 'downloaded', 'signed'].includes(contractStatus);
-      if (!isAdmin(user) && !hasActiveSubscription(user) && !localPaid) {
+      // Sin registro verificado en base de datos, sólo admins o usuarios con suscripción activa pueden exportar
+      if (!isAdmin(user) && !hasActiveSubscription(user)) {
         return res.status(402).json({ error: 'Este contrato requiere pago o una membresía activa para descargarse' });
       }
       source = typeof generatedText === 'string' ? generatedText : '';
@@ -192,6 +191,15 @@ router.post('/exportContractDocx', async (req, res) => {
     });
 
     const base64 = await Packer.toBase64String(doc);
+    if (contract && (contract.status === 'paid' || (!isContractPaid(contract) && hasActiveSubscription(user)))) {
+      await prisma.generatedContract.update({
+        where: { id: contract.id },
+        data: {
+          status: 'downloaded',
+          ...(!contract.payment_method && hasActiveSubscription(user) ? { payment_method: 'subscription' } : {}),
+        },
+      }).catch(() => {});
+    }
     const safeName = (docTemplateName || 'contrato').replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g, '').trim() || 'contrato';
     return res.json({ base64, filename: `${safeName}.docx` });
   } catch (error) {
@@ -251,8 +259,9 @@ router.post('/createContractSignature', async (req, res) => {
             province: contract_data.province || 'Argentina',
             form_data: contract_data.form_data || {},
             generated_text: contract_data.generated_text || '',
-            status: contract_data.status || 'paid',
-            signature_status: contract_data.signature_status || 'not_required',
+            // Nunca confiar en un status "paid" enviado por el cliente si no estaba en DB
+            status: 'pending_payment',
+            signature_status: 'not_required',
           },
         });
       } catch (_) {}
@@ -530,21 +539,35 @@ router.post('/verifyStripePayment', async (req, res) => {
     if (stripe && sessionId) {
       try {
         const session = await stripe.checkout.sessions.retrieve(sessionId);
-        if (session.payment_status === 'paid' || session.status === 'complete') {
-          // Si fue pago único de contrato
-          const targetContractId = session.metadata?.contractId || contractId;
-          if (targetContractId) {
-            await prisma.generatedContract.update({
-              where: { id: targetContractId },
-              data: {
-                status: 'paid',
-                payment_method: 'stripe',
-                ...(user ? { created_by_id: user.id } : {}),
-              },
-            }).catch(() => {});
+        const isPaidSession =
+          session.payment_status === 'paid' || session.payment_status === 'no_payment_required';
+        if (isPaidSession) {
+          if (user && session.metadata?.userId && session.metadata.userId !== user.id) {
+            return res.status(403).json({ error: 'La sesión de pago no pertenece al usuario autenticado.' });
           }
+
+          // Si fue pago único de contrato
+          if (session.metadata?.type === 'single' && session.metadata?.contractId) {
+            const targetContractId = session.metadata.contractId;
+            if (contractId && contractId !== targetContractId) {
+              return res.status(403).json({ error: 'La sesión de pago corresponde a otro contrato.' });
+            }
+            const existing = await prisma.generatedContract.findUnique({ where: { id: targetContractId } }).catch(() => null);
+            if (existing) {
+              await prisma.generatedContract.update({
+                where: { id: targetContractId },
+                data: {
+                  ...(!isContractPaid(existing) ? { status: 'paid' } : {}),
+                  payment_method: 'stripe',
+                  ...(user && isGuestOwner(existing.created_by_id) ? { created_by_id: user.id } : {}),
+                },
+              }).catch(() => {});
+            }
+            return res.json({ success: true, status: 'paid', type: 'single', contractId: targetContractId });
+          }
+
           // Si fue suscripción
-          const targetUserId = user?.id || session.metadata?.userId;
+          const targetUserId = session.metadata?.userId || user?.id;
           if (session.metadata?.type === 'subscription' && targetUserId) {
             await prisma.user.update({
               where: { id: targetUserId },
@@ -554,16 +577,16 @@ router.post('/verifyStripePayment', async (req, res) => {
                 stripe_subscription_id: typeof session.subscription === 'string' ? session.subscription : session.subscription?.id,
               },
             }).catch(() => {});
+            return res.json({ success: true, status: 'paid', type: 'subscription' });
           }
-          return res.json({ success: true, status: 'paid' });
         }
       } catch (err) {
         console.warn('Verificación en Stripe falló:', err.message);
       }
     }
 
-    // Respaldo para QA
-    if (QA_PAYMENTS_ENABLED && contractId) {
+    // Respaldo para QA (sólo fuera de producción cuando ENABLE_QA_PAYMENTS=true)
+    if (QA_PAYMENTS_ENABLED && contractId && !sessionId) {
       const result = await markContractPaid(user, contractId, 'single');
       if (!result.ok) return res.status(result.status).json({ error: result.error });
       return res.json({ success: true, status: 'paid' });
@@ -612,16 +635,22 @@ router.post('/syncSubscriptionStatus', async (req, res) => {
 // 8. createStripeCustomerPortal
 router.post('/createStripeCustomerPortal', async (req, res) => {
   try {
-    const origin = req.headers.origin || process.env.FRONTEND_URL || 'https://micontratos.com';
     const user = req.user;
-    if (stripe && user?.stripe_customer_id) {
-      const portalSession = await stripe.billingPortal.sessions.create({
-        customer: user.stripe_customer_id,
-        return_url: `${origin}/mi-cuenta`,
-      });
-      return res.json({ url: portalSession.url });
+    if (!user) {
+      return res.status(401).json({ error: 'Iniciá sesión para gestionar tu facturación.' });
     }
-    return res.json({ url: `${origin}/mi-cuenta` });
+    const origin = req.headers.origin || process.env.FRONTEND_URL || 'https://micontratos.com';
+    if (!stripe) {
+      return res.status(503).json({ error: 'La pasarela Stripe no está configurada.' });
+    }
+    if (!user.stripe_customer_id) {
+      return res.status(400).json({ error: 'No tenés un perfil de facturación en Stripe asociado a esta cuenta.' });
+    }
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: user.stripe_customer_id,
+      return_url: `${origin}/mi-cuenta`,
+    });
+    return res.json({ url: portalSession.url });
   } catch (err) {
     console.error('Error in createStripeCustomerPortal:', err);
     return res.status(500).json({ error: err.message });
@@ -633,16 +662,22 @@ router.post('/stripeWebhook', async (req, res) => {
   if (!stripe) return res.status(503).send('Stripe no configurado');
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const signature = req.headers['stripe-signature'];
-  let event = req.body;
+  if (!webhookSecret) {
+    console.error('⚠️ STRIPE_WEBHOOK_SECRET no definido. Webhook rechazado por seguridad.');
+    return res.status(503).send('Webhook secret no configurado');
+  }
 
-  if (webhookSecret && signature && req.rawBody) {
-    try {
-      event = stripe.webhooks.constructEvent(req.rawBody, signature, webhookSecret);
-    } catch (err) {
-      console.error('⚠️ Webhook signature verification failed:', err.message);
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
+  const signature = req.headers['stripe-signature'];
+  if (!signature || !req.rawBody) {
+    return res.status(400).send('Falta cabecera stripe-signature');
+  }
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, signature, webhookSecret);
+  } catch (err) {
+    console.error('⚠️ Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   try {
@@ -651,10 +686,17 @@ router.post('/stripeWebhook', async (req, res) => {
         const session = event.data.object;
         const meta = session.metadata || {};
         if (meta.type === 'single' && meta.contractId) {
-          await prisma.generatedContract.update({
-            where: { id: meta.contractId },
-            data: { status: 'paid', payment_method: 'stripe' },
-          }).catch(() => {});
+          const existing = await prisma.generatedContract.findUnique({ where: { id: meta.contractId } }).catch(() => null);
+          if (existing) {
+            await prisma.generatedContract.update({
+              where: { id: meta.contractId },
+              data: {
+                ...(!isContractPaid(existing) ? { status: 'paid' } : {}),
+                payment_method: 'stripe',
+                ...(meta.userId && isGuestOwner(existing.created_by_id) ? { created_by_id: meta.userId } : {}),
+              },
+            }).catch(() => {});
+          }
         }
         if (meta.type === 'subscription' && meta.userId) {
           await prisma.user.update({

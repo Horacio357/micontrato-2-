@@ -220,12 +220,12 @@ export default function Preview() {
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12 print:mb-0"
+          className={`mb-12 print:mb-0 ${!hasAccess ? "print:hidden" : ""}`}
         >
           {generatedText ? (
             <AIContractPreview
               text={generatedText}
-              blurred={false}
+              blurred={!hasAccess}
               formData={contract.form_data || {}}
               contract={contract}
             />
@@ -234,10 +234,19 @@ export default function Preview() {
               contractSlug={contract.template_id}
               province={contract.province}
               formData={contract.form_data || {}}
-              blurred={false}
+              blurred={!hasAccess}
             />
           )}
         </motion.div>
+
+        {!hasAccess && (
+          <div className="hidden print:block text-center p-10 border border-slate-300 rounded-lg">
+            <h2 className="text-xl font-bold text-slate-900 mb-2">Vista previa protegida</h2>
+            <p className="text-sm text-slate-600">
+              Para imprimir o descargar el documento oficial completo sin marcas de agua, completá el pago desde tu navegador en micontratos.com.
+            </p>
+          </div>
+        )}
 
         {/* Action card below contract */}
         <div className="text-center print:hidden bg-white rounded-2xl shadow-sm border border-slate-200/80 p-8 sm:p-10 max-w-xl mx-auto">

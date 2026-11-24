@@ -42,10 +42,10 @@ export default function ContractAccessModal({
   const isContractPaid = contract?.status === 'paid' || contract?.status === 'downloaded' || contract?.status === 'signed';
   const hasActiveSubscription = user?.subscription_status === 'active';
   const isDevOrQA =
-    import.meta.env.DEV ||
-    import.meta.env.VITE_ENABLE_QA_PAYMENTS === 'true' ||
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1';
+    import.meta.env.VITE_ENABLE_QA_PAYMENTS !== 'false' &&
+    (import.meta.env.VITE_ENABLE_QA_PAYMENTS === 'true' ||
+      (import.meta.env.DEV &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')));
 
   // Buscar el precio dinámico configurado en la base de datos para esta plantilla
   const matchedTemplate = dynamicContracts.find(

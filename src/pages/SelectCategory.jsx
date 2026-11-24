@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CATEGORIES } from "@/lib/contractsData";
+import { useDynamicContracts } from "@/hooks/useDynamicContracts";
 import { Building2, Briefcase, Handshake, Scale, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/landing/Navbar";
@@ -8,6 +9,8 @@ import Navbar from "@/components/landing/Navbar";
 const iconMap = { Building2, Briefcase, Handshake, Scale };
 
 export default function SelectCategory() {
+  const { contracts } = useDynamicContracts();
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -48,6 +51,7 @@ export default function SelectCategory() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto">
           {CATEGORIES.map((cat, i) => {
             const Icon = iconMap[cat.icon];
+            const availableCount = contracts.filter((c) => c.category === cat.id && c.available).length;
             return (
               <motion.div
                 key={cat.id}
@@ -65,7 +69,9 @@ export default function SelectCategory() {
                     </h3>
                     <p className="text-sm text-muted-foreground mb-4">{cat.description}</p>
                     <span className="text-xs font-medium text-accent">
-                      {cat.count} modelos disponibles →
+                      {availableCount > 0
+                        ? `${availableCount} ${availableCount === 1 ? "modelo disponible" : "modelos disponibles"} →`
+                        : "Próximamente →"}
                     </span>
                   </div>
                 </Link>

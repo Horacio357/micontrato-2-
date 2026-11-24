@@ -18,7 +18,7 @@ const steps = [
   {
     icon: CreditCard,
     title: "Pagá y desbloqueá",
-    desc: "Pago único o suscripción con MercadoPago",
+    desc: "Pago único o suscripción segura con tarjeta vía Stripe",
     hint: "Acceso inmediato y seguro",
   },
   {

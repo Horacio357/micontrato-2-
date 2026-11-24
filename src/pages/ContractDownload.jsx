@@ -115,6 +115,16 @@ export default function ContractDownload() {
       base44.functions.invoke("verifyStripePayment", { sessionId, contractId })
         .then((res) => {
           if (res.data?.success || res.data?.status === "paid") {
+            if (contractId?.startsWith("local_")) {
+              try {
+                const item = localStorage.getItem(`contract_${contractId}`);
+                if (item) {
+                  const parsed = JSON.parse(item);
+                  parsed.status = "paid";
+                  localStorage.setItem(`contract_${contractId}`, JSON.stringify(parsed));
+                }
+              } catch (_) {}
+            }
             toast.success("¡Pago acreditado con éxito! Tu contrato ha sido desbloqueado.");
           }
           queryClient.invalidateQueries({ queryKey: ["contract-download", contractId] });

@@ -90,8 +90,13 @@ export default function LegalPage({ type = "terminos" }) {
     (d) => (d.document_type || d.key) === targetKey
   );
 
+  const legacyStubs = new Set([
+    "Términos y condiciones de uso de micontratos.com de acuerdo a la legislación vigente de la República Argentina y normas de contratación electrónica del Código Civil y Comercial de la Nación.",
+    "Política de privacidad de micontratos.com conforme a la Ley N° 25.326 de Protección de los Datos Personales de la República Argentina.",
+  ]);
+  const dbContent = dbDoc?.content?.trim();
   const displayTitle = dbDoc?.title || defaultDoc.title;
-  const displayContent = dbDoc?.content?.trim() ? dbDoc.content : defaultDoc.content;
+  const displayContent = dbContent && !legacyStubs.has(dbContent) ? dbContent : defaultDoc.content;
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">

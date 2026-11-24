@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Save, Check } from "lucide-react";
 
+import { toast } from "sonner";
+
 const CATEGORY_LABELS = {
   inmobiliario: "Inmobiliario",
   laboral: "Laboral",
@@ -44,16 +46,23 @@ export default function AdminPrecios() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       await Promise.all(
-        templates.map((t) =>
-          base44.entities.ContractTemplate.update(t.id, { price: Number(prices[t.id]) || t.price })
-        )
+        templates.map((t) => {
+          const parsed = Number(prices[t.id]);
+          const nextPrice = Number.isFinite(parsed) && parsed > 0 ? parsed : t.price;
+          return base44.entities.ContractTemplate.update(t.id, { price: nextPrice });
+        })
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-templates-precios"] });
       queryClient.invalidateQueries({ queryKey: ["admin-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["public-contract-templates"] });
+      toast.success("Precios actualizados correctamente");
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    },
+    onError: (err) => {
+      toast.error(err?.message || "No se pudieron guardar los precios");
     },
   });
 

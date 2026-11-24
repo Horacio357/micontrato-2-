@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { PROVINCES, CONTRACTS } from "@/lib/contractsData";
+import { PROVINCES } from "@/lib/contractsData";
+import { useDynamicContracts } from "@/hooks/useDynamicContracts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, MapPin, Check, Bell } from "lucide-react";
@@ -13,7 +14,8 @@ import Navbar from "@/components/landing/Navbar";
 export default function SelectProvince() {
   const { categoria, contrato } = useParams();
   const navigate = useNavigate();
-  const contract = CONTRACTS.find((c) => c.slug === contrato);
+  const { contracts } = useDynamicContracts();
+  const contract = contracts.find((c) => c.slug === contrato);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [waitlistProvince, setWaitlistProvince] = useState("");
   const [waitlistEmail, setWaitlistEmail] = useState("");

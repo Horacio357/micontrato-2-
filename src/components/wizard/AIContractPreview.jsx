@@ -16,9 +16,9 @@ export default function AIContractPreview({
     return parseContractText(text);
   }, [text]);
 
-  // Auto-detect test mode: if contract text contains "prueba" in party names
+  // Auto-detect test mode only in local development
   const isTestMode = useMemo(() => {
-    if (!cleanText) return false;
+    if (!import.meta.env.DEV || !cleanText) return false;
     const first500 = cleanText.substring(0, 500).toLowerCase();
     return first500.includes("prueba");
   }, [cleanText]);
