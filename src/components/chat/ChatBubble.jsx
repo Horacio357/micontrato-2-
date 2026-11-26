@@ -14,6 +14,22 @@ export default function ChatBubble() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
+  const [quota, setQuota] = useState({ remaining: 10, limit: 10, limit_reached: false });
+
+  const syncQuotaFromServer = async () => {
+    try {
+      const q = await base44.agents.getQuota();
+      if (q && typeof q.remaining === "number") {
+        setQuota({
+          remaining: q.remaining,
+          limit: q.limit || 10,
+          limit_reached: Boolean(q.limit_reached),
+        });
+      }
+    } catch {
+      // mantener valor local si aún no responde
+    }
+  };
 
   const startConversation = async () => {
     if (conversation) return;
@@ -31,13 +47,11 @@ export default function ChatBubble() {
       return;
     }
     setOpen(true);
-    if (!conversation) {
-      await startConversation();
-    }
+    await Promise.all([startConversation(), syncQuotaFromServer()]);
   };
 
   const handleSend = async () => {
-    if (!input.trim() || sending || !conversation) return;
+    if (!input.trim() || sending || !conversation || quota.limit_reached) return;
     setSending(true);
     const msg = input;
     setInput("");
@@ -47,6 +61,13 @@ export default function ChatBubble() {
       setSubscribed(true);
       base44.agents.subscribeToConversation(conversation.id, (data) => {
         setMessages([...(data.messages || [])]);
+        if (data.quota) {
+          setQuota({
+            remaining: data.quota.remaining ?? 10,
+            limit: data.quota.limit || 10,
+            limit_reached: Boolean(data.quota.limit_reached),
+          });
+        }
         setSending(false);
       });
     }
@@ -58,6 +79,13 @@ export default function ChatBubble() {
       const updated = await base44.agents.addMessage(conversation, { role: "user", content: msg });
       if (updated?.messages) {
         setMessages([...updated.messages]);
+      }
+      if (updated?.quota) {
+        setQuota({
+          remaining: updated.quota.remaining ?? 10,
+          limit: updated.quota.limit || 10,
+          limit_reached: Boolean(updated.quota.limit_reached),
+        });
       }
     } finally {
       setSending(false);
@@ -99,8 +127,8 @@ export default function ChatBubble() {
                   <MessageCircle className="w-4 h-4 text-accent-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">Asistente micontrato</p>
-                  <p className="text-xs opacity-70">Te ayudo a elegir tu contrato</p>
+                  <p className="text-sm font-semibold">Asistente micontratos</p>
+                  <p className="text-xs opacity-70">Uso de la app · {quota.remaining}/{quota.limit} consultas</p>
                 </div>
               </div>
               <button onClick={() => setOpen(false)} className="hover:opacity-70 transition-opacity">
@@ -127,26 +155,42 @@ export default function ChatBubble() {
               )}
             </ScrollArea>
 
-            {/* Input */}
-            <div className="px-4 pb-4 pt-2 border-t border-border">
-              <div className="flex gap-2">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Escribí tu consulta..."
-                  className="flex-1"
-                  disabled={!conversation}
-                />
-                <Button
-                  size="icon"
-                  onClick={handleSend}
-                  disabled={!input.trim() || sending || !conversation}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0"
-                >
-                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </Button>
-              </div>
+            {/* Input / Footer */}
+            <div className="px-4 pb-4 pt-2 border-t border-border space-y-2">
+              {quota.limit_reached ? (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+                  Alcanzaste el límite de {quota.limit} consultas. Para soporte administrativo escribí a{" "}
+                  <a href="mailto:Admin@micontratos.com" className="font-semibold underline">
+                    Admin@micontratos.com
+                  </a>
+                  .
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Consultá cómo usar la plataforma..."
+                    className="flex-1"
+                    disabled={!conversation}
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleSend}
+                    disabled={!input.trim() || sending || !conversation}
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground shrink-0"
+                  >
+                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </Button>
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground text-center">
+                Temas administrativos:{" "}
+                <a href="mailto:Admin@micontratos.com" className="text-accent hover:underline font-medium">
+                  Admin@micontratos.com
+                </a>
+              </p>
             </div>
           </motion.div>
         )}

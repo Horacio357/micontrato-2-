@@ -144,12 +144,20 @@ export const base44 = {
   },
   agents: {
     listeners: new Set(),
+    getQuota: async () => {
+      return request('/chat/quota');
+    },
     createConversation: async () => {
       return {
         id: 'conv-' + Date.now(),
         messages: [
-          { role: 'assistant', content: '¡Hola! 👋 Soy el asistente virtual de micontratos.com. ¿En qué puedo ayudarte hoy?' },
+          {
+            role: 'assistant',
+            content:
+              '¡Hola! 👋 Soy el asistente de **micontratos.com**. Respondo dudas sobre el funcionamiento de la plataforma (hasta 10 consultas por cliente). Por temas administrativos, escribí a **Admin@micontratos.com**.',
+          },
         ],
+        quota: null,
       };
     },
     addMessage: async (conversation, { role, content }) => {
@@ -167,8 +175,19 @@ export const base44 = {
         if (reply?.content) {
           conversation.messages.push({ role: 'assistant', content: reply.content });
         }
+        if (typeof reply?.remaining === 'number' || typeof reply?.limit_reached === 'boolean') {
+          conversation.quota = {
+            used: reply.used,
+            remaining: reply.remaining,
+            limit: reply.limit,
+            limit_reached: Boolean(reply.limit_reached),
+          };
+        }
       } catch {
-        conversation.messages.push({ role: 'assistant', content: 'Disculpa, no pude procesar la respuesta.' });
+        conversation.messages.push({
+          role: 'assistant',
+          content: 'Disculpa, no pude procesar la respuesta. Por temas administrativos escribí a **Admin@micontratos.com**.',
+        });
       }
 
       base44.agents.listeners.forEach((cb) => cb(conversation));
