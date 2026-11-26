@@ -176,20 +176,8 @@ export default function ContractDownload() {
     setPendingAction(null);
   };
 
-  const [sendingEmail, setSendingEmail] = useState(false);
-
-  const handleEmail = async () => {
-    setSendingEmail(true);
-    try {
-      const res = await base44.functions.invoke('sendContractEmail', { contractId });
-      const sentTo = res.data?.sent_to;
-      const count = Array.isArray(sentTo) ? sentTo.length : 1;
-      toast.success(`Contrato enviado a ${count} ${count === 1 ? "destinatario" : "destinatarios"}`);
-    } catch {
-      toast.error("Error al enviar el email");
-    } finally {
-      setSendingEmail(false);
-    }
+  const handleEmail = () => {
+    toast.info("El envío de contratos por email estará disponible próximamente. Por ahora podés descargarlo en Word o PDF.");
   };
 
   if (isLoading) {
@@ -319,12 +307,16 @@ export default function ContractDownload() {
           </Card>
 
           <Card
-            className={`p-5 text-center cursor-pointer hover:shadow-lg hover:border-accent/30 transition-all group ${sendingEmail ? "opacity-60 pointer-events-none" : ""}`}
+            aria-disabled="true"
+            className="relative p-5 text-center border-dashed border-border/80 bg-muted/40 opacity-85 cursor-not-allowed select-none"
             onClick={handleEmail}
           >
-            <Mail className={`w-7 h-7 text-accent mx-auto mb-2 group-hover:scale-110 transition-transform ${sendingEmail ? "animate-pulse" : ""}`} />
-            <p className="font-semibold text-foreground text-sm">{sendingEmail ? "Enviando..." : "Reenviar email"}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">A tu casilla</p>
+            <Badge className="absolute top-2 right-2 bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-semibold px-2 py-0.5">
+              Próximamente
+            </Badge>
+            <Mail className="w-7 h-7 text-muted-foreground mx-auto mb-2" />
+            <p className="font-semibold text-muted-foreground text-sm">Enviar por email</p>
+            <p className="text-xs text-muted-foreground/80 mt-0.5">Próximamente</p>
           </Card>
 
           {/* Sign button */}

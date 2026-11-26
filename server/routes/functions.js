@@ -363,21 +363,25 @@ router.post('/sendContractEmail', async (req, res) => {
     const recipientEmail = user.email;
     const frontendUrl = process.env.FRONTEND_URL || 'https://micontratos.com';
 
-    if (resend) {
-      await resend.emails.send({
-        from: 'miContratos <hola@micontratos.com>',
-        to: [recipientEmail],
-        subject: `Tu contrato: ${contractTitle}`,
-        html: `
-          <h1>¡Hola!</h1>
-          <p>Tu contrato <strong>${escapeHtml(contractTitle)}</strong> se ha generado exitosamente y está listo para descargar o firmar.</p>
-          <p><a href="${frontendUrl}/mi-cuenta/contrato/${encodeURIComponent(contractId)}">Ver contrato</a></p>
-          <p>Gracias por usar miContratos.</p>
-        `,
+    if (!resend) {
+      return res.status(503).json({
+        ok: false,
+        coming_soon: true,
+        error: 'El envío de contratos por email estará disponible próximamente.',
       });
-    } else {
-      console.log(`[Mock Email] To: ${recipientEmail}, Subject: Tu contrato: ${contractTitle}`);
     }
+
+    await resend.emails.send({
+      from: 'miContratos <hola@micontratos.com>',
+      to: [recipientEmail],
+      subject: `Tu contrato: ${contractTitle}`,
+      html: `
+        <h1>¡Hola!</h1>
+        <p>Tu contrato <strong>${escapeHtml(contractTitle)}</strong> se ha generado exitosamente y está listo para descargar o firmar.</p>
+        <p><a href="${frontendUrl}/mi-cuenta/contrato/${encodeURIComponent(contractId)}">Ver contrato</a></p>
+        <p>Gracias por usar miContratos.</p>
+      `,
+    });
 
     return res.json({ ok: true, sent_to: [recipientEmail] });
   } catch (error) {

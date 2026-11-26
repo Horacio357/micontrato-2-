@@ -174,8 +174,6 @@ export default function Wizard() {
         localStorage.setItem(`contract_${fallbackId}`, JSON.stringify(generated));
       }
 
-      base44.functions.invoke('sendContractEmail', { contractId: generated.id }).catch(() => {});
-
       localStorage.removeItem(storageKey);
       if (isMounted.current) {
         const wasPaid = editingContract?.status === "paid" || editingContract?.status === "downloaded";
